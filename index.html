@@ -3,43 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Авторизация через Telegram</title>
+  <title>Public To-Do List</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-8">
-  <div class="max-w-md mx-auto bg-white rounded-lg shadow p-6 text-center">
-    <h1 class="text-2xl font-bold mb-6">Вход через Telegram</h1>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-xl bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4 text-center">Общий список задач</h1>
 
-    <!-- Кнопка авторизации -->
-    <a href="https://t.me/ProtocolPlanerBot" target="_blank" class="bg-blue-500 text-white px-6 py-2 rounded text-lg shadow hover:bg-blue-600 transition">
-      Авторизоваться через Telegram
-    </a>
+    <form id="todo-form" class="flex mb-4">
+      <input type="text" id="todo-input" placeholder="Новая задача..." class="flex-1 border border-gray-300 p-2 rounded-l">
+      <button type="submit" class="bg-blue-500 text-white px-4 rounded-r hover:bg-blue-600">Добавить</button>
+    </form>
 
-    <!-- Контейнер с данными пользователя -->
-    <div id="user-info" class="mt-8 hidden">
-      <img id="user-photo" src="" class="w-20 h-20 mx-auto rounded-full border mb-2" alt="User Avatar">
-      <p id="user-name" class="text-lg font-semibold"></p>
-    </div>
+    <ul id="todo-list" class="space-y-2">
+      <!-- задачи -->
+    </ul>
   </div>
 
   <script>
-    // Проверка токена в URL и отображение пользователя
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const tgName = urlParams.get('username');
-    const photoUrl = urlParams.get('photo_url');
+    const API_URL = "https://protokol-server.onrender.com/public-tasks";
 
-    if (token && tgName) {
-      localStorage.setItem("token", token);
-
-      document.getElementById("user-info").classList.remove("hidden");
-      document.getElementById("user-name").textContent = `@${tgName}`;
-      if (photoUrl) {
-        document.getElementById("user-photo").src = photoUrl;
-      } else {
-        document.getElementById("user-photo").src = "https://telegram.org/img/t_logo.png";
-      }
+    async function fetchTasks() {
+      const res = await fetch(API_URL);
+      const tasks = await res.json();
+      const list = document.getElementById("todo-list");
+      list.innerHTML = "";
+      tasks.forEach(task => {
+        const li = document.createElement("li");
+        li.className = "border rounded p-2 bg-gray-50";
+        li.textContent = task.text;
+        list.appendChild(li);
+      });
     }
+
+    document.getElementById("todo-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("todo-input");
+      const text = input.value.trim();
+      if (!text) return;
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      input.value = "";
+      fetchTasks();
+    });
+
+    fetchTasks();
   </script>
 </body>
 </html>
