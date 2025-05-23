@@ -3,360 +3,528 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Протокол планёрок</title>
-    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+    <title>Крокодил - Рисуй и Угадывай</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-6xl">
-        <!-- Шапка приложения -->
-        <header class="mb-10">
-            <div class="flex justify-between items-center">
-                <h1 class="text-3xl font-bold text-gray-800">
-                    <i class="fas fa-calendar-check text-blue-500 mr-3"></i>
-                    Протокол планёрок
-                </h1>
-            </div>
-            <p class="text-gray-500 mt-2">Система учета задач и результатов рабочих встреч</p>
-        </header>
+    <style>
+        .drawing-canvas {
+            touch-action: none;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
         
-        <main>
-            <!-- Основные вкладки -->
-            <div class="flex border-b border-gray-200 mb-8">
-                <button id="current-tab" class="tab-btn px-4 py-2 font-medium text-blue-500 border-b-2 border-blue-500">Текущая планёрка</button>
-                <button id="history-tab" class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700">Лента планёрок</button>
-                <button id="stats-tab" class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700">Статистика</button>
-            </div>
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.2);
+        }
+        
+        .brush-option {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            background-color: #f3f4f6;
+        }
+        
+        .brush-option:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .word-card {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            color: white;
+            transform-style: preserve-3d;
+            transition: all 0.5s ease;
+        }
+        
+        .word-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        @media (max-width: 640px) {
+            .controls-container {
+                flex-direction: column;
+            }
             
-            <!-- Контейнер для контента -->
-            <div id="content-container">
-                <!-- Текущая планёрка -->
-                <div id="current-meeting-container" class="fade-in">
-                    <!-- Блок незавершённых задач -->
-                    <div id="unfinished-tasks-section" class="bg-white rounded-xl shadow-md overflow-hidden mb-10">
-                        <div class="p-6 border-b border-gray-200">
-                            <div class="flex justify-between items-center">
-                                <h2 class="text-xl font-semibold text-gray-800 flex items-center">
-                                    <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
-                                    Незавершённые задачи
-                                </h2>
-                            </div>
-                            <div class="mt-4 flex flex-wrap justify-between items-center text-sm">
-                                <div class="text-gray-500 flex items-center mb-2">
-                                    <i class="fas fa-tasks mr-1"></i>
-                                    <span id="unfinished-total-tasks">0</span> задач
-                                </div>
-                                <div class="flex space-x-2 mb-2">
-                                    <button class="sort-btn active px-3 py-1 bg-blue-50 text-blue-500 rounded-lg" data-sort="date">По дате</button>
-                                    <button class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg" data-sort="priority">По приоритету</button>
-                                    <button class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg" data-sort="deadline">По дедлайну</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="p-6 max-h-96 overflow-y-auto" id="unfinished-tasks-container">
-                            <p class="text-gray-400 text-sm">Загрузка задач...</p>
-                        </div>
-                    </div>
-
-                    <!-- Основной блок текущей планёрки -->
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-                        <div class="p-6 border-b border-gray-200">
-                            <div id="meeting-title-container" class="flex items-center">
-                                <i class="fas fa-calendar-day text-blue-500 mr-3"></i>
-                                <div id="meeting-title" class="editable-title text-xl font-semibold text-gray-800">
-                                    Планёрка от <span id="current-meeting-date"></span>
-                                </div>
-                                <input type="text" id="meeting-title-input" class="editable-title-input hidden" value="">
-                            </div>
-                            <div class="mt-4 flex items-center text-sm text-gray-500">
-                                <div class="mr-4">
-                                    <i class="fas fa-tasks mr-1"></i>
-                                    <span id="total-tasks">0</span> задач
-                                </div>
-                                <div>
-                                    <i class="fas fa-check-circle mr-1"></i>
-                                    <span id="completed-tasks">0</span> выполнено
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Прогресс выполнения -->
-                        <div class="px-6 py-3">
-                            <div class="progress-bar">
-                                <div id="meeting-progress" class="progress-fill" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Список задач -->
-                        <div class="p-6">
-                            <div id="tasks-container" class="space-y-3">
-                                <!-- Задачи будут здесь -->
-                                <div class="text-center py-10 text-gray-400" id="no-tasks-message">
-                                    <i class="fas fa-clipboard-list text-4xl mb-3"></i>
-                                    <p>Нет добавленных задач</p>
-                                    <button id="add-first-task" class="mt-4 px-4 py-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100">
-                                        Добавить первую задачу
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Форма добавления задачи -->
-                            <div class="mt-6">
-                                <div class="flex mb-2">
-                                    <input type="text" id="new-task-input" placeholder="Добавить новую задачу..." class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                    <button id="add-task-btn" class="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                    <button id="show-options-btn" class="options-btn px-3 py-2 border border-gray-300 rounded-r-lg hover:bg-gray-100 ml-1">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Дополнительные параметры задачи -->
-                                <div id="task-options" class="task-options">
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label class="block text-sm text-gray-500 mb-1">Ответственный</label>
-                                            <input type="text" id="task-responsible" list="responsible-list" placeholder="Введите имя" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                            <datalist id="responsible-list">
-                                                <!-- Список будет заполняться динамически -->
-                                            </datalist>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm text-gray-500 mb-1">Дедлайн</label>
-                                            <div class="relative">
-                                                <input type="datetime-local" id="task-deadline" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent datetime-input">
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm text-gray-500 mb-1">Приоритет</label>
-                                            <div class="priority-selector">
-                                                <div class="priority-bars" id="priority-bars">
-                                                    <div class="priority-bar" data-priority="1"></div>
-                                                    <div class="priority-bar" data-priority="2"></div>
-                                                    <div class="priority-bar" data-priority="3"></div>
-                                                    <div class="priority-bar" data-priority="4"></div>
-                                                    <div class="priority-bar" data-priority="5"></div>
-                                                </div>
-                                                <div class="priority-label" id="priority-label">Не указан</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Блок заметок -->
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-                        <div class="p-6 border-b border-gray-200">
-                            <h2 class="text-xl font-semibold text-gray-800 flex items-center">
-                                <i class="fas fa-sticky-note text-yellow-500 mr-3"></i>
-                                Заметки
-                            </h2>
-                        </div>
-                        <div class="p-6">
-                            <textarea id="meeting-notes" placeholder="Добавьте заметки по планёрке..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[150px]"></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Кнопка завершения планёрки -->
-                    <div class="flex justify-end mb-8">
-                        <button id="complete-meeting-btn" class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center">
-                            <i class="fas fa-check-circle mr-2"></i> Завершить планёрку
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Лента планёрок (скрыта по умолчанию) -->
-                <div id="history-container" class="hidden">
-                    <!-- Панель поиска и сортировки -->
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-                        <div class="p-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="search-input" class="block text-sm font-medium text-gray-700 mb-1">Поиск по планёркам</label>
-                                    <div class="relative">
-                                        <input type="text" id="search-input" placeholder="Поиск по названию, задачам, заметкам..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <i class="fas fa-search text-gray-400"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Сортировка</label>
-                                    <div class="flex space-x-2">
-                                        <button id="sort-date-btn" class="sort-btn active px-3 py-1 bg-blue-50 text-blue-500 rounded-lg text-sm">
-                                            <i class="fas fa-calendar-day mr-1"></i> По дате
-                                        </button>
-                                        <button id="sort-completion-btn" class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-sm">
-                                            <i class="fas fa-percentage mr-1"></i> По выполнению
-                                        </button>
-                                        <button id="sort-tasks-btn" class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-sm">
-                                            <i class="fas fa-tasks mr-1"></i> По задачам
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="meetings-grid">
-                        <!-- Карточки планёрок будут здесь -->
-                        <div class="text-center py-10 text-gray-400" id="no-history-message">
-                            <i class="fas fa-history text-4xl mb-3"></i>
-                            <p>Лента планёрок пуста</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Статистика (скрыта по умолчанию) -->
-                <div id="stats-container" class="hidden">
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-6">
-                            <i class="fas fa-chart-line text-purple-500 mr-3"></i>
-                            Статистика выполнения задач
-                        </h2>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            <div class="bg-blue-50 p-6 rounded-lg">
-                                <div class="text-4xl font-bold text-blue-600 mb-2" id="total-meetings">0</div>
-                                <div class="text-gray-600">Всего планёрок</div>
-                            </div>
-                            <div class="bg-green-50 p-6 rounded-lg">
-                                <div class="text-4xl font-bold text-green-600 mb-2" id="completed-percentage">0%</div>
-                                <div class="text-gray-600">Средний % выполнения</div>
-                            </div>
-                            <div class="bg-purple-50 p-6 rounded-lg">
-                                <div class="text-4xl font-bold text-purple-600 mb-2" id="total-tasks-stats">0</div>
-                                <div class="text-gray-600">Всего задач</div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gray-50 p-6 rounded-lg">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Прогресс выполнения по дням</h3>
-                            <div class="chart-container" id="completion-chart">
-                                <!-- График будет здесь -->
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gray-50 p-6 rounded-lg mt-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Распределение задач</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <h4 class="text-md font-medium text-gray-700 mb-3">По статусу</h4>
-                                    <div class="flex items-center mb-2">
-                                        <div class="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
-                                        <span class="text-sm">Выполненные: <span id="completed-count">0</span></span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <div class="w-4 h-4 bg-gray-300 rounded-full mr-2"></div>
-                                        <span class="text-sm">Невыполненные: <span id="pending-count">0</span></span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 class="text-md font-medium text-gray-700 mb-3">По планёркам</h4>
-                                    <div id="meetings-stats">
-                                        <!-- Статистика по планёркам будет здесь -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+            .color-palette {
+                order: 2;
+                margin-top: 1rem;
+            }
+        }
         
-        <footer class="mt-16 text-center text-gray-500 text-sm pb-8">
-            <p>© 2025 Протокол планёрок. Все права защищены.</p>
-        </footer>
-    </div>
+        /* Анимация для кнопок */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Шапка -->
+    <header class="bg-blue-600 text-white py-4 shadow-lg">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🎨 Крокодил</h1>
+            <div class="flex items-center space-x-4">
+                <button id="help-btn" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded-full transition">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+            </div>
+        </div>
+    </header>
 
-    <!-- Модальное окно для просмотра планёрки -->
-    <div id="view-meeting-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl transform transition-all fade-in max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-xl font-semibold text-gray-800" id="view-meeting-title"></h3>
-                <button id="close-view-meeting-btn" class="text-gray-400 hover:text-gray-600">
+    <!-- Основной контент -->
+    <main class="flex-grow container mx-auto px-4 py-6">
+        <!-- Состояние игры -->
+        <div id="game-state" class="flex justify-between items-center mb-6">
+            <div class="bg-white rounded-lg shadow px-4 py-2 flex items-center">
+                <span class="font-semibold mr-2">Режим:</span>
+                <span id="status-text" class="text-blue-600 font-medium">Выберите слово</span>
+            </div>
+            <div id="score-container" class="bg-white rounded-lg shadow px-4 py-2">
+                <div class="flex items-center">
+                    <i class="fas fa-star text-yellow-500 mr-2"></i>
+                    <span class="font-semibold">Раунд:</span>
+                    <span id="round" class="ml-2 font-bold">1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Холст для рисования -->
+        <div id="drawing-section" class="mb-6">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-blue-600 text-white py-3 px-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-paint-brush mr-2"></i> Рисуйте слово
+                    </h2>
+                    <div id="word-to-draw" class="bg-white text-blue-600 font-bold px-3 py-1 rounded-full"></div>
+                </div>
+                <div class="p-4">
+                    <canvas id="drawing-canvas" class="drawing-canvas w-full h-64 md:h-96 border border-gray-200"></canvas>
+                    
+                    <div class="controls-container flex flex-wrap justify-between items-center mt-4">
+                        <div class="flex space-x-2">
+                            <button id="clear-btn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition">
+                                <i class="fas fa-trash-alt mr-1"></i> Очистить
+                            </button>
+                            <button id="undo-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-lg transition">
+                                <i class="fas fa-undo mr-1"></i> Отменить
+                            </button>
+                        </div>
+                        
+                        <div class="color-palette flex space-x-2">
+                            <div class="color-option bg-black border-2 border-gray-300" data-color="black"></div>
+                            <div class="color-option bg-red-500 border-2 border-gray-300" data-color="red"></div>
+                            <div class="color-option bg-blue-500 border-2 border-gray-300" data-color="blue"></div>
+                            <div class="color-option bg-green-500 border-2 border-gray-300" data-color="green"></div>
+                            <div class="color-option bg-yellow-400 border-2 border-gray-300" data-color="yellow"></div>
+                            <div class="color-option bg-purple-500 border-2 border-gray-300" data-color="purple"></div>
+                        </div>
+                        
+                        <div class="brush-options flex space-x-2">
+                            <div class="brush-option" data-size="2">
+                                <div style="width: 8px; height: 8px; background-color: black; border-radius: 50%;"></div>
+                            </div>
+                            <div class="brush-option" data-size="5">
+                                <div style="width: 12px; height: 12px; background-color: black; border-radius: 50%;"></div>
+                            </div>
+                            <div class="brush-option" data-size="10">
+                                <div style="width: 16px; height: 16px; background-color: black; border-radius: 50%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Угадывание -->
+        <div id="guessing-section" class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+            <div class="bg-green-600 text-white py-3 px-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-search mr-2"></i> Угадайте слово
+                </h2>
+            </div>
+            <div class="p-4">
+                <div class="flex flex-col md:flex-row md:items-center md:space-x-4">
+                    <input type="text" id="guess-input" placeholder="Введите ваш вариант..." 
+                           class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 mb-2 md:mb-0">
+                    <button id="submit-guess" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition font-medium">
+                        <i class="fas fa-paper-plane mr-2"></i> Проверить
+                    </button>
+                </div>
+                
+                <div id="hint-container" class="mt-4 hidden">
+                    <div class="bg-yellow-100 border-l-4 border-yellow-500 p-3">
+                        <div class="flex items-center">
+                            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                            <p id="hint-text" class="text-yellow-700 font-medium">Подсказка: Первая буква - <span id="first-letter" class="font-bold"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопка нового раунда -->
+        <div id="next-round-section" class="hidden">
+            <button id="next-round-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg transition font-medium text-lg pulse-animation">
+                <i class="fas fa-redo mr-2"></i> Следующее слово
+            </button>
+        </div>
+
+        <!-- Выбор слова -->
+        <div id="word-selection-section" class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+            <div class="bg-purple-600 text-white py-3 px-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-list-ul mr-2"></i> Выберите слово для рисования
+                </h2>
+            </div>
+            <div class="p-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Солнце</button>
+                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Кошка</button>
+                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Велосипед</button>
+                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Самолет</button>
+                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Мороженое</button>
+                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Случайное слово</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Модальное окно помощи -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="bg-blue-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
+                <h3 class="text-lg font-bold">Помощь по игре</h3>
+                <button id="close-help-modal" class="text-white hover:text-gray-200">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="p-6">
-                <div class="mb-6">
-                    <h4 class="text-lg font-medium text-gray-700 mb-3">Задачи</h4>
-                    <div id="view-meeting-tasks" class="space-y-2">
-                        <!-- Задачи будут здесь -->
-                    </div>
-                </div>
-                
-                <div class="mb-6">
-                    <h4 class="text-lg font-medium text-gray-700 mb-3">Заметки</h4>
-                    <div id="view-meeting-notes" class="bg-gray-50 p-4 rounded-lg">
-                        <!-- Заметки будут здесь -->
-                    </div>
-                </div>
-                
-                <div class="flex justify-between items-center">
-                    <div class="text-sm text-gray-500">
-                        <span id="view-meeting-date"></span>
-                    </div>
-                    <button id="edit-meeting-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                        <i class="fas fa-edit mr-2"></i> Редактировать
-                    </button>
-                </div>
+            <div class="p-4">
+                <p class="mb-4">🎨 <strong>Как играть:</strong></p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>Выберите слово из списка или получите случайное слово</li>
+                    <li>Нарисуйте выбранное слово на холсте</li>
+                    <li>Попробуйте угадать, что нарисовано (можно угадывать свое же слово)</li>
+                    <li>После угадывания начните новый раунд</li>
+                </ul>
+                <p class="mt-4 text-sm text-gray-600">Играйте в компании друзей или самостоятельно для тренировки!</p>
+            </div>
+            <div class="px-4 py-3 bg-gray-50 rounded-b-lg flex justify-end">
+                <button id="close-help-modal-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                    Понятно
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно для редактирования планёрки -->
-    <div id="edit-meeting-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl transform transition-all fade-in max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-xl font-semibold text-gray-800">Редактирование планёрки</h3>
-                <button id="close-edit-meeting-btn" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Название планёрки</label>
-                    <input type="text" id="edit-meeting-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Дата планёрки</label>
-                    <input type="date" id="edit-meeting-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                
-                <div class="mb-6">
-                    <h4 class="text-lg font-medium text-gray-700 mb-3">Задачи</h4>
-                    <div id="edit-meeting-tasks-container" class="space-y-3 mb-4">
-                        <!-- Задачи для редактирования будут здесь -->
-                    </div>
-                    <button id="add-task-in-edit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                        <i class="fas fa-plus mr-2"></i> Добавить задачу
-                    </button>
-                </div>
-                
-                <div class="mb-6">
-                    <h4 class="text-lg font-medium text-gray-700 mb-3">Заметки</h4>
-                    <textarea id="edit-meeting-notes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[150px]"></textarea>
-                </div>
-                
-                <div class="flex justify-between">
-                    <button id="delete-meeting-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-                        <i class="fas fa-trash mr-2"></i> Удалить планёрку
-                    </button>
-                    <div>
-                        <button id="cancel-edit-meeting-btn" class="px-4 py-2 text-gray-600 mr-3 hover:text-gray-800">Отмена</button>
-                        <button id="save-edit-meeting-btn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Элементы интерфейса
+            const canvas = document.getElementById('drawing-canvas');
+            const ctx = canvas.getContext('2d');
+            const clearBtn = document.getElementById('clear-btn');
+            const undoBtn = document.getElementById('undo-btn');
+            const colorOptions = document.querySelectorAll('.color-option');
+            const brushOptions = document.querySelectorAll('.brush-option');
+            const guessInput = document.getElementById('guess-input');
+            const submitGuessBtn = document.getElementById('submit-guess');
+            const wordToDraw = document.getElementById('word-to-draw');
+            const statusText = document.getElementById('status-text');
+            const roundElement = document.getElementById('round');
+            const hintContainer = document.getElementById('hint-container');
+            const firstLetterElement = document.getElementById('first-letter');
+            const nextRoundBtn = document.getElementById('next-round-btn');
+            const nextRoundSection = document.getElementById('next-round-section');
+            const wordSelectionSection = document.getElementById('word-selection-section');
+            const wordCards = document.querySelectorAll('.word-card');
+            const helpBtn = document.getElementById('help-btn');
+            const helpModal = document.getElementById('help-modal');
+            const closeHelpModalBtn = document.getElementById('close-help-modal-btn');
+            const closeHelpModal = document.getElementById('close-help-modal');
 
-    <script src="script.js"></script>
+            // Настройка холста
+            function resizeCanvas() {
+                const container = canvas.parentElement;
+                canvas.width = container.offsetWidth;
+                canvas.height = container.offsetHeight;
+                redraw();
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Переменные игры
+            let currentWord = '';
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let currentColor = 'black';
+            let currentBrushSize = 5;
+            let drawingHistory = [];
+            let currentRound = 1;
+            let isGuessingMode = false;
+
+            // Инициализация холста
+            function initCanvas() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                drawingHistory = [];
+            }
+
+            // Перерисовка холста
+            function redraw() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                if (drawingHistory.length > 0) {
+                    drawingHistory.forEach(path => {
+                        ctx.strokeStyle = path.color;
+                        ctx.lineWidth = path.size;
+                        ctx.lineJoin = 'round';
+                        ctx.lineCap = 'round';
+                        
+                        ctx.beginPath();
+                        path.points.forEach((point, i) => {
+                            if (i === 0) {
+                                ctx.moveTo(point.x, point.y);
+                            } else {
+                                ctx.lineTo(point.x, point.y);
+                            }
+                        });
+                        ctx.stroke();
+                    });
+                }
+            }
+
+            // Обработчики событий рисования
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('touchend', stopDrawing);
+
+            function startDrawing(e) {
+                isDrawing = true;
+                const pos = getPosition(e);
+                [lastX, lastY] = [pos.x, pos.y];
+                
+                // Начинаем новый путь
+                drawingHistory.push({
+                    color: currentColor,
+                    size: currentBrushSize,
+                    points: [{x: lastX, y: lastY}]
+                });
+            }
+
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                startDrawing(mouseEvent);
+            }
+
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                const pos = getPosition(e);
+                const currentPath = drawingHistory[drawingHistory.length - 1];
+                
+                // Рисуем линию
+                ctx.strokeStyle = currentPath.color;
+                ctx.lineWidth = currentPath.size;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                
+                // Добавляем точку в текущий путь
+                currentPath.points.push({x: pos.x, y: pos.y});
+                
+                [lastX, lastY] = [pos.x, pos.y];
+            }
+
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                draw(mouseEvent);
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+            }
+
+            function getPosition(e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            // Очистка холста
+            clearBtn.addEventListener('click', function() {
+                initCanvas();
+            });
+
+            // Отмена последнего действия
+            undoBtn.addEventListener('click', function() {
+                if (drawingHistory.length > 0) {
+                    drawingHistory.pop();
+                    redraw();
+                }
+            });
+
+            // Выбор цвета
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    currentColor = this.getAttribute('data-color');
+                    // Обновляем активный цвет
+                    colorOptions.forEach(opt => opt.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-500'));
+                    this.classList.add('ring-2', 'ring-offset-2', 'ring-blue-500');
+                });
+            });
+
+            // Выбор размера кисти
+            brushOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    currentBrushSize = parseInt(this.getAttribute('data-size'));
+                    // Обновляем активный размер
+                    brushOptions.forEach(opt => opt.classList.remove('bg-blue-100'));
+                    this.classList.add('bg-blue-100');
+                });
+            });
+
+            // Выбор слова
+            wordCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    let word = this.textContent.trim();
+                    
+                    if (word === 'Случайное слово') {
+                        const randomWords = ['Яблоко', 'Телефон', 'Дерево', 'Океан', 'Гитара', 'Фонарик', 'Зонтик', 'Книга', 'Часы', 'Футбол'];
+                        word = randomWords[Math.floor(Math.random() * randomWords.length)];
+                    }
+                    
+                    currentWord = word;
+                    wordToDraw.textContent = word;
+                    statusText.textContent = 'Рисуйте слово';
+                    
+                    // Скрываем выбор слова и показываем холст и угадывание
+                    wordSelectionSection.classList.add('hidden');
+                    drawingSection.classList.remove('hidden');
+                    guessingSection.classList.remove('hidden');
+                    
+                    // Очищаем холст
+                    initCanvas();
+                    
+                    // Скрываем кнопку следующего раунда
+                    nextRoundSection.classList.add('hidden');
+                    
+                    // Показываем первую букву как подсказку
+                    firstLetterElement.textContent = word[0];
+                    hintContainer.classList.remove('hidden');
+                });
+            });
+
+            // Проверка угадывания
+            submitGuessBtn.addEventListener('click', checkGuess);
+            guessInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkGuess();
+                }
+            });
+
+            function checkGuess() {
+                const guess = guessInput.value.trim().toLowerCase();
+                const correctWord = currentWord.toLowerCase();
+                
+                if (guess === correctWord) {
+                    statusText.textContent = 'Правильно!';
+                    statusText.classList.remove('text-blue-600');
+                    statusText.classList.add('text-green-600');
+                    
+                    // Показываем кнопку следующего раунда
+                    nextRoundSection.classList.remove('hidden');
+                } else {
+                    statusText.textContent = 'Неверно, попробуйте еще';
+                    statusText.classList.remove('text-blue-600');
+                    statusText.classList.add('text-red-600');
+                    
+                    // Показываем подсказку
+                    hintContainer.classList.remove('hidden');
+                }
+            }
+
+            // Следующий раунд
+            nextRoundBtn.addEventListener('click', function() {
+                currentRound++;
+                roundElement.textContent = currentRound;
+                
+                // Сбрасываем состояние
+                statusText.textContent = 'Выберите слово';
+                statusText.classList.remove('text-green-600', 'text-red-600');
+                statusText.classList.add('text-blue-600');
+                
+                guessInput.value = '';
+                hintContainer.classList.add('hidden');
+                
+                // Показываем выбор слова
+                wordSelectionSection.classList.remove('hidden');
+                drawingSection.classList.add('hidden');
+                guessingSection.classList.add('hidden');
+                nextRoundSection.classList.add('hidden');
+            });
+
+            // Помощь
+            helpBtn.addEventListener('click', function() {
+                helpModal.classList.remove('hidden');
+            });
+
+            closeHelpModalBtn.addEventListener('click', function() {
+                helpModal.classList.add('hidden');
+            });
+
+            closeHelpModal.addEventListener('click', function() {
+                helpModal.classList.add('hidden');
+            });
+
+            // Инициализация игры
+            initCanvas();
+            
+            // Скрываем холст и угадывание при старте
+            const drawingSection = document.getElementById('drawing-section');
+            const guessingSection = document.getElementById('guessing-section');
+            drawingSection.classList.add('hidden');
+            guessingSection.classList.add('hidden');
+        });
+    </script>
 </body>
 </html>
