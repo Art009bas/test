@@ -3,47 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход через Telegram</title>
+  <title>Авторизация через Telegram</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-8">
-  <div class="max-w-xl mx-auto bg-white rounded-lg shadow p-6">
-    <h1 class="text-2xl font-bold mb-4 text-center">Авторизация через Telegram</h1>
+  <div class="max-w-md mx-auto bg-white rounded-lg shadow p-6 text-center">
+    <h1 class="text-2xl font-bold mb-6">Вход через Telegram</h1>
 
-    <!-- Telegram Login Widget -->
-    <div class="flex justify-center mb-6">
-      <script async src="https://telegram.org/js/telegram-widget.js?22"
-              data-telegram-login="ProtocolPlanerBot"
-              data-size="large"
-              data-userpic="false"
-              data-request-access="write"
-              data-auth-url="https://protokol-server.onrender.com/auth/telegram"
-              data-lang="ru">
-      </script>
-    </div>
+    <!-- Кнопка авторизации -->
+    <a href="https://t.me/ProtocolPlanerBot" target="_blank" class="bg-blue-500 text-white px-6 py-2 rounded text-lg shadow hover:bg-blue-600 transition">
+      Авторизоваться через Telegram
+    </a>
 
-    <h2 class="text-lg font-semibold mb-2">Список пользователей</h2>
-    <div id="user-list" class="space-y-2 text-gray-800">
-      <!-- Список пользователей будет загружен через JS -->
+    <!-- Контейнер с данными пользователя -->
+    <div id="user-info" class="mt-8 hidden">
+      <img id="user-photo" src="" class="w-20 h-20 mx-auto rounded-full border mb-2" alt="User Avatar">
+      <p id="user-name" class="text-lg font-semibold"></p>
     </div>
   </div>
 
   <script>
-    const API_BASE = "https://protokol-server.onrender.com";
+    // Проверка токена в URL и отображение пользователя
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const tgName = urlParams.get('username');
+    const photoUrl = urlParams.get('photo_url');
 
-    // Получаем список всех пользователей из базы
-    async function fetchUsers() {
-      const res = await fetch(`${API_BASE}/users`);
-      if (res.ok) {
-        const users = await res.json();
-        const container = document.getElementById("user-list");
-        container.innerHTML = users.map(u => `<div class="border p-2 rounded">${u.email}</div>`).join('');
+    if (token && tgName) {
+      localStorage.setItem("token", token);
+
+      document.getElementById("user-info").classList.remove("hidden");
+      document.getElementById("user-name").textContent = `@${tgName}`;
+      if (photoUrl) {
+        document.getElementById("user-photo").src = photoUrl;
       } else {
-        document.getElementById("user-list").innerText = "Ошибка загрузки пользователей";
+        document.getElementById("user-photo").src = "https://telegram.org/img/t_logo.png";
       }
     }
-
-    fetchUsers();
   </script>
 </body>
 </html>
