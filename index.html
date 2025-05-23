@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Протокол планёрок</title>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Шапка приложения -->
+        <header class="mb-10">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-calendar-check text-blue-500 mr-3"></i>
+                    Протокол планёрок
+                </h1>
+            </div>
+            <p class="text-gray-500 mt-2">Система учета задач и результатов рабочих встреч</p>
+        </header>
+        
+        <main>
+            <!-- Основные вкладки -->
+            <div class="flex border-b border-gray-200 mb-8">
+                <button id="current-tab" class="tab-btn px-4 py-2 font-medium text-blue-500 border-b-2 border-blue-500">Текущая планёрка</button>
+                <button id="history-tab" class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700">Лента планёрок</button>
+                <button id="stats-tab" class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700">Статистика</button>
+            </div>
+            
+            <!-- Контейнер для контента -->
+            <div id="content-container">
+                <!-- Текущая планёрка -->
+                <div id="current-meeting-container" class="fade-in">
+                    <!-- Блок незавершённых задач -->
+                    <div id="unfinished-tasks-section" class="bg-white rounded-xl shadow-md overflow-hidden mb-10">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                                    <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                                    Незавершённые задачи
+                                </h2>
+                            </div>
+                            <div class="mt-4 flex flex-wrap justify-between items-center text-sm">
+                                <div class="text-gray-500 flex items-center mb-2">
+                                    <i class="fas fa-tasks mr-1"></i>
+                                    <span id="unfinished-total-tasks">0</span> задач
+                                </div>
+                                <div class="flex space-x-2 mb-2">
+                                    <button class="sort-btn active px-3 py-1 bg-blue-50 text-blue-500 rounded-lg" data-sort="date">По дате</button>
+                                    <button class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg" data-sort="priority">По приоритету</button>
+                                    <button class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg" data-sort="deadline">По дедлайну</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 max-h-96 overflow-y-auto" id="unfinished-tasks-container">
+                            <p class="text-gray-400 text-sm">Загрузка задач...</p>
+                        </div>
+                    </div>
+
+                    <!-- Основной блок текущей планёрки -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+                        <div class="p-6 border-b border-gray-200">
+                            <div id="meeting-title-container" class="flex items-center">
+                                <i class="fas fa-calendar-day text-blue-500 mr-3"></i>
+                                <div id="meeting-title" class="editable-title text-xl font-semibold text-gray-800">
+                                    Планёрка от <span id="current-meeting-date"></span>
+                                </div>
+                                <input type="text" id="meeting-title-input" class="editable-title-input hidden" value="">
+                            </div>
+                            <div class="mt-4 flex items-center text-sm text-gray-500">
+                                <div class="mr-4">
+                                    <i class="fas fa-tasks mr-1"></i>
+                                    <span id="total-tasks">0</span> задач
+                                </div>
+                                <div>
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    <span id="completed-tasks">0</span> выполнено
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Прогресс выполнения -->
+                        <div class="px-6 py-3">
+                            <div class="progress-bar">
+                                <div id="meeting-progress" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Список задач -->
+                        <div class="p-6">
+                            <div id="tasks-container" class="space-y-3">
+                                <!-- Задачи будут здесь -->
+                                <div class="text-center py-10 text-gray-400" id="no-tasks-message">
+                                    <i class="fas fa-clipboard-list text-4xl mb-3"></i>
+                                    <p>Нет добавленных задач</p>
+                                    <button id="add-first-task" class="mt-4 px-4 py-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-100">
+                                        Добавить первую задачу
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Форма добавления задачи -->
+                            <div class="mt-6">
+                                <div class="flex mb-2">
+                                    <input type="text" id="new-task-input" placeholder="Добавить новую задачу..." class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <button id="add-task-btn" class="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button id="show-options-btn" class="options-btn px-3 py-2 border border-gray-300 rounded-r-lg hover:bg-gray-100 ml-1">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Дополнительные параметры задачи -->
+                                <div id="task-options" class="task-options">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-sm text-gray-500 mb-1">Ответственный</label>
+                                            <input type="text" id="task-responsible" list="responsible-list" placeholder="Введите имя" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <datalist id="responsible-list">
+                                                <!-- Список будет заполняться динамически -->
+                                            </datalist>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-500 mb-1">Дедлайн</label>
+                                            <div class="relative">
+                                                <input type="datetime-local" id="task-deadline" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent datetime-input">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-500 mb-1">Приоритет</label>
+                                            <div class="priority-selector">
+                                                <div class="priority-bars" id="priority-bars">
+                                                    <div class="priority-bar" data-priority="1"></div>
+                                                    <div class="priority-bar" data-priority="2"></div>
+                                                    <div class="priority-bar" data-priority="3"></div>
+                                                    <div class="priority-bar" data-priority="4"></div>
+                                                    <div class="priority-bar" data-priority="5"></div>
+                                                </div>
+                                                <div class="priority-label" id="priority-label">Не указан</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Блок заметок -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+                        <div class="p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                                <i class="fas fa-sticky-note text-yellow-500 mr-3"></i>
+                                Заметки
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <textarea id="meeting-notes" placeholder="Добавьте заметки по планёрке..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[150px]"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Кнопка завершения планёрки -->
+                    <div class="flex justify-end mb-8">
+                        <button id="complete-meeting-btn" class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center">
+                            <i class="fas fa-check-circle mr-2"></i> Завершить планёрку
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Лента планёрок (скрыта по умолчанию) -->
+                <div id="history-container" class="hidden">
+                    <!-- Панель поиска и сортировки -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="search-input" class="block text-sm font-medium text-gray-700 mb-1">Поиск по планёркам</label>
+                                    <div class="relative">
+                                        <input type="text" id="search-input" placeholder="Поиск по названию, задачам, заметкам..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-search text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Сортировка</label>
+                                    <div class="flex space-x-2">
+                                        <button id="sort-date-btn" class="sort-btn active px-3 py-1 bg-blue-50 text-blue-500 rounded-lg text-sm">
+                                            <i class="fas fa-calendar-day mr-1"></i> По дате
+                                        </button>
+                                        <button id="sort-completion-btn" class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-sm">
+                                            <i class="fas fa-percentage mr-1"></i> По выполнению
+                                        </button>
+                                        <button id="sort-tasks-btn" class="sort-btn px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-sm">
+                                            <i class="fas fa-tasks mr-1"></i> По задачам
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="meetings-grid">
+                        <!-- Карточки планёрок будут здесь -->
+                        <div class="text-center py-10 text-gray-400" id="no-history-message">
+                            <i class="fas fa-history text-4xl mb-3"></i>
+                            <p>Лента планёрок пуста</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Статистика (скрыта по умолчанию) -->
+                <div id="stats-container" class="hidden">
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6">
+                            <i class="fas fa-chart-line text-purple-500 mr-3"></i>
+                            Статистика выполнения задач
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-blue-50 p-6 rounded-lg">
+                                <div class="text-4xl font-bold text-blue-600 mb-2" id="total-meetings">0</div>
+                                <div class="text-gray-600">Всего планёрок</div>
+                            </div>
+                            <div class="bg-green-50 p-6 rounded-lg">
+                                <div class="text-4xl font-bold text-green-600 mb-2" id="completed-percentage">0%</div>
+                                <div class="text-gray-600">Средний % выполнения</div>
+                            </div>
+                            <div class="bg-purple-50 p-6 rounded-lg">
+                                <div class="text-4xl font-bold text-purple-600 mb-2" id="total-tasks-stats">0</div>
+                                <div class="text-gray-600">Всего задач</div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Прогресс выполнения по дням</h3>
+                            <div class="chart-container" id="completion-chart">
+                                <!-- График будет здесь -->
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-6 rounded-lg mt-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Распределение задач</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 class="text-md font-medium text-gray-700 mb-3">По статусу</h4>
+                                    <div class="flex items-center mb-2">
+                                        <div class="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                                        <span class="text-sm">Выполненные: <span id="completed-count">0</span></span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-4 h-4 bg-gray-300 rounded-full mr-2"></div>
+                                        <span class="text-sm">Невыполненные: <span id="pending-count">0</span></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-md font-medium text-gray-700 mb-3">По планёркам</h4>
+                                    <div id="meetings-stats">
+                                        <!-- Статистика по планёркам будет здесь -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="mt-16 text-center text-gray-500 text-sm pb-8">
+            <p>© 2025 Протокол планёрок. Все права защищены.</p>
+        </footer>
+    </div>
+
+    <!-- Модальное окно для просмотра планёрки -->
+    <div id="view-meeting-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl transform transition-all fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-semibold text-gray-800" id="view-meeting-title"></h3>
+                <button id="close-view-meeting-btn" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-700 mb-3">Задачи</h4>
+                    <div id="view-meeting-tasks" class="space-y-2">
+                        <!-- Задачи будут здесь -->
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-700 mb-3">Заметки</h4>
+                    <div id="view-meeting-notes" class="bg-gray-50 p-4 rounded-lg">
+                        <!-- Заметки будут здесь -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        <span id="view-meeting-date"></span>
+                    </div>
+                    <button id="edit-meeting-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        <i class="fas fa-edit mr-2"></i> Редактировать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для редактирования планёрки -->
+    <div id="edit-meeting-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl transform transition-all fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-semibold text-gray-800">Редактирование планёрки</h3>
+                <button id="close-edit-meeting-btn" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Название планёрки</label>
+                    <input type="text" id="edit-meeting-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Дата планёрки</label>
+                    <input type="date" id="edit-meeting-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-700 mb-3">Задачи</h4>
+                    <div id="edit-meeting-tasks-container" class="space-y-3 mb-4">
+                        <!-- Задачи для редактирования будут здесь -->
+                    </div>
+                    <button id="add-task-in-edit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                        <i class="fas fa-plus mr-2"></i> Добавить задачу
+                    </button>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-700 mb-3">Заметки</h4>
+                    <textarea id="edit-meeting-notes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[150px]"></textarea>
+                </div>
+                
+                <div class="flex justify-between">
+                    <button id="delete-meeting-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                        <i class="fas fa-trash mr-2"></i> Удалить планёрку
+                    </button>
+                    <div>
+                        <button id="cancel-edit-meeting-btn" class="px-4 py-2 text-gray-600 mr-3 hover:text-gray-800">Отмена</button>
+                        <button id="save-edit-meeting-btn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
