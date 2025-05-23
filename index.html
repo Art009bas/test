@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход через Telegram</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+  <div class="max-w-xl mx-auto bg-white rounded-lg shadow p-6">
+    <h1 class="text-2xl font-bold mb-4 text-center">Авторизация через Telegram</h1>
+
+    <!-- Telegram Login Widget -->
+    <div class="flex justify-center mb-6">
+      <script async src="https://telegram.org/js/telegram-widget.js?22"
+              data-telegram-login="ProtocolPlanerBot"
+              data-size="large"
+              data-userpic="false"
+              data-request-access="write"
+              data-auth-url="https://protokol-server.onrender.com/auth/telegram"
+              data-lang="ru">
+      </script>
+    </div>
+
+    <h2 class="text-lg font-semibold mb-2">Список пользователей</h2>
+    <div id="user-list" class="space-y-2 text-gray-800">
+      <!-- Список пользователей будет загружен через JS -->
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://protokol-server.onrender.com";
+
+    // Получаем список всех пользователей из базы
+    async function fetchUsers() {
+      const res = await fetch(`${API_BASE}/users`);
+      if (res.ok) {
+        const users = await res.json();
+        const container = document.getElementById("user-list");
+        container.innerHTML = users.map(u => `<div class="border p-2 rounded">${u.email}</div>`).join('');
+      } else {
+        document.getElementById("user-list").innerText = "Ошибка загрузки пользователей";
+      }
+    }
+
+    fetchUsers();
+  </script>
+</body>
+</html>
