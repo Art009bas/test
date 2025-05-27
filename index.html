@@ -450,17 +450,20 @@
             toggleNewReportForm(false);
         }
         async function loadReportsFromServer() {
-            try {
-                const response = await fetch(`${API_URL}/reports`);
-                if (!response.ok) throw new Error('Ошибка загрузки отчётов');
-                reportState.reports = await response.json();
-                renderReports();
-                updateStatistics();
-            } catch (error) {
-                console.error('Ошибка:', error);
-                showNotification('Не удалось загрузить отчёты. Проверьте подключение к интернету.', 'error');
-            }
-        }
+    try {
+        const response = await fetch(`${API_URL}/reports`);
+        if (!response.ok) throw new Error('Ошибка загрузки отчётов');
+        // Сортировка от последнего к первому по дате
+        reportState.reports = (await response.json()).sort((a, b) => 
+            new Date(b.date) - new Date(a.date)
+        );
+        renderReports();
+        updateStatistics();
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showNotification('Не удалось загрузить отчёты.', 'error');
+    }
+}
         async function updateStatistics() {
             try {
                 const response = await fetch(`${API_URL}/reports/stats`);
@@ -805,12 +808,12 @@ const selfPaidBadge = selfPaid ? `
                 reportElement.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <div class="font-bold text-lg text-blue-600">${report.amount.toLocaleString('ru-RU')} ₽</div>
+                            <div class="font-bold text-lg text-blue-600">${Math.round(report.amount).toLocaleString('ru-RU')} ₽</div>
                             <div class="text-sm text-gray-500 mb-1">${formattedDate}</div>
                             <div class="text-sm text-gray-700 mb-2">${report.comment ? report.comment : ''}</div>
                             <div class="flex flex-wrap items-center gap-1">
                                 <span class="px-2 py-1 ${paymentMethodClass} text-xs rounded-full">
-                                    <i class="fas ${paymentMethodIcon} mr-1"></i> ${report.paymentMethod === 'cash' ? 'Нал' : 'Счёт'}
+                                    <i class="fas ${paymentMethodIcon} mr-1"></i> ${paymentMethod === 'cash' ? 'Нал' : 'Счёт'}
                                 </span>
                                 <span class="status-badge px-2 py-1 ${statusClass} text-xs rounded-full" data-id="${report.id}">
                                     <i class="fas ${statusIcon} mr-1"></i> ${statusText}
@@ -903,34 +906,55 @@ const selfPaidBadge = selfPaid ? `
             });
         }
         function openEditModal(reportId) {
-            const report = reportState.reports.find(r => r.id === reportId);
-            if (!report) return;
-            reportElements.editId.value = report.id;
-            reportElements.editAmount.value = report.amount;
-            reportElements.editDate.value = report.date;
-            reportElements.editComment.value = report.comment || '';
-            reportElements.editSelfPaidInput.checked = report.selfPaid || false;
-            reportElements.editPaymentMethodBtns.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.method === report.paymentMethod) {
-                    btn.classList.add('active');
-                    reportElements.editPaymentMethodInput.value = report.paymentMethod;
-                }
-            });
-            if (report.fileName) {
-                reportElements.editFileName.textContent = report.fileName;
-                reportElements.editFileSize.textContent = report.fileSize;
-                reportElements.editFilePreview.classList.remove('hidden');
-                if (report.fileType.match('image.*') && report.fileData) {
-                    reportElements.editFilePreviewImage.src = report.fileData;
-                    reportElements.editFilePreviewImage.classList.remove('hidden');
-                } else {
-                    reportElements.editFilePreviewImage.classList.add('hidden');
-                }
-            } else {
-                reportElements.editFilePreview.classList.add('hidden');
-                reportElements.editFilePreviewImage.classList.add('hidden');
-            }
+    const report = reportState.reports.find(r => r.id === reportId);
+    if (!report) return;
+
+    // Установка даты
+    reportElements.editDate.value = report.date; // Дата уже в формате YYYY-MM-DD из сервера
+
+    // Установка галочки "свои средства"
+    function openEditModal(reportId) {
+    const report = reportState.reports.find(r => r.id === reportId);
+    if (!report) return;
+
+    // Установка даты (обрезаем время, если оно есть)
+    reportElements.editDate.value = report.date.split('T')[0];
+
+    // Установка галочки "свои средства"
+    reportElements.editSelfPaidInput.checked = Boolean(report.self_paid || report.selfPaid);
+
+    // Установка остальных полей
+    reportElements.editId.value = report.id;
+    reportElements.editAmount.value = Math.round(report.amount); // Целое число
+    reportElements.editComment.value = report.comment || '';
+    
+    // Установка формы оплаты
+    reportElements.editPaymentMethodBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.method === report.paymentMethod) {
+            btn.classList.add('active');
+            reportElements.editPaymentMethodInput.value = report.paymentMethod;
+        }
+    });
+
+    // Отображение файла
+    if (report.fileName) {
+        reportElements.editFileName.textContent = report.fileName;
+        reportElements.editFileSize.textContent = report.fileSize;
+        reportElements.editFilePreview.classList.remove('hidden');
+        if (report.fileType.match('image.*') && report.fileData) {
+            reportElements.editFilePreviewImage.src = report.fileData;
+            reportElements.editFilePreviewImage.classList.remove('hidden');
+        } else {
+            reportElements.editFilePreviewImage.classList.add('hidden');
+        }
+    } else {
+        reportElements.editFilePreview.classList.add('hidden');
+        reportElements.editFilePreviewImage.classList.add('hidden');
+    }
+
+    reportElements.editModal.classList.remove('hidden');
+}
             reportElements.editModal.classList.remove('hidden');
         }
         document.addEventListener('DOMContentLoaded', async () => {
