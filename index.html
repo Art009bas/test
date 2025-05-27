@@ -76,6 +76,23 @@
                     <i class="fas fa-file-invoice-dollar text-blue-500 mr-3"></i>
                     Отчёт бухам
                 </h1>
+                <!-- Блок авторизации -->
+<div id="auth-container" class="flex justify-between items-center mb-6">
+  <div id="telegram-login-container" class="mb-0">
+    <script async src="https://telegram.org/js/telegram-widget.js?22 " 
+            data-telegram-login="your_bot_username"
+            data-size="medium"
+            data-auth-url="https://your-site.com/auth/telegram "
+            data-request-access="write">
+    </script>
+  </div>
+
+  <!-- Профиль пользователя -->
+  <div id="user-profile" class="hidden flex items-center space-x-2">
+    <img id="user-avatar" src="" alt="Аватар" class="w-8 h-8 rounded-full">
+    <span id="user-name" class="font-medium text-gray-700"></span>
+  </div>
+</div>
             </div>
             <p class="text-gray-500 mt-2">Учёт заказанных средств и форм оплаты. (перейти в&nbsp;<a href="https://art009bas.github.io/reestr/ ">Планер</a>)</p>
         </header>
@@ -905,6 +922,83 @@ const selfPaidBadge = selfPaid ? `
                 });
             });
         }
+
+let currentUser = null;
+
+async function checkAuth() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${API_URL}/auth/check`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      localStorage.removeItem('token');
+      showLoginButton();
+      return;
+    }
+
+    const data = await response.json();
+    currentUser = data.user;
+    showUserProfile(currentUser);
+  } catch (e) {
+    localStorage.removeItem('token');
+    showLoginButton();
+  }
+}
+
+async function handleTelegramAuth(event) {
+  const form = event.target;
+  const iframe = form.querySelector('iframe');
+
+  if (!iframe) return;
+
+  window.addEventListener('message', async (e) => {
+    if (e.origin !== 'https://web.telegram.org ') return;
+
+    try {
+      const response = await fetch(`${API_URL}/auth/telegram`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(e.data)
+      });
+
+      if (!response.ok) throw new Error('Ошибка авторизации');
+
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      currentUser = data.user;
+      showUserProfile(currentUser);
+    } catch (error) {
+      alert('Ошибка входа через Telegram');
+    }
+  });
+}
+
+function showLoginButton() {
+  document.getElementById('telegram-login-container').classList.remove('hidden');
+  document.getElementById('user-profile').classList.add('hidden');
+}
+
+function showUserProfile(user) {
+  document.getElementById('telegram-login-container').classList.add('hidden');
+  document.getElementById('user-profile').classList.remove('hidden');
+  document.getElementById('user-name').textContent = user.username;
+  document.getElementById('user-avatar').src = user.avatar || '';
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkAuth();
+  const telegramForm = document.querySelector('.tgme_widget_login');
+  if (telegramForm) {
+    telegramForm.addEventListener('submit', handleTelegramAuth);
+  }
+});
+
+
+        
         function openEditModal(reportId) {
     const report = reportState.reports.find(r => r.id === reportId);
     if (!report) return;
