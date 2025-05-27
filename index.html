@@ -3,527 +3,938 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Крокодил - Рисуй и Угадывай</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Отчёт бухам</title>
+    <script src="https://cdn.tailwindcss.com "></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css ">
     <style>
-        .drawing-canvas {
-            touch-action: none;
-            background-color: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
-        .color-option {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.2s;
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-        
-        .color-option:hover {
-            transform: scale(1.2);
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
         }
-        
-        .brush-option {
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border-radius: 50%;
-            background-color: #f3f4f6;
+        .slide-in {
+            animation: slideIn 0.3s ease-out forwards;
         }
-        
-        .brush-option:hover {
-            background-color: #e5e7eb;
+        .file-input-label {
+            transition: all 0.3s ease;
         }
-        
-        .word-card {
-            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .file-preview-image {
+            max-height: 150px;
+            object-fit: contain;
+        }
+        .payment-method-btn, .status-btn {
+            transition: all 0.2s ease;
+        }
+        .payment-method-btn.active, .status-btn.active {
+            background-color: #3b82f6;
             color: white;
-            transform-style: preserve-3d;
-            transition: all 0.5s ease;
+            border-color: #3b82f6;
         }
-        
-        .word-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        .amount-input:focus + .currency-label {
+            border-color: #3b82f6;
         }
-        
+        .status-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .collapsible-content.expanded {
+            max-height: 1000px;
+        }
         @media (max-width: 640px) {
-            .controls-container {
-                flex-direction: column;
+            .form-grid {
+                grid-template-columns: 1fr;
             }
-            
-            .color-palette {
-                order: 2;
-                margin-top: 1rem;
+            .submit-btn {
+                width: 100%;
             }
-        }
-        
-        /* Анимация для кнопок */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .pulse-animation {
-            animation: pulse 1.5s infinite;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Шапка -->
-    <header class="bg-blue-600 text-white py-4 shadow-lg">
-        <div class="container mx-auto px-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold">🎨 Крокодил</h1>
-            <div class="flex items-center space-x-4">
-                <button id="help-btn" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded-full transition">
-                    <i class="fas fa-question-circle"></i>
-                </button>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+                    <i class="fas fa-file-invoice-dollar text-blue-500 mr-3"></i>
+                    Отчёт бухам
+                </h1>
             </div>
-        </div>
-    </header>
-
-    <!-- Основной контент -->
-    <main class="flex-grow container mx-auto px-4 py-6">
-        <!-- Состояние игры -->
-        <div id="game-state" class="flex justify-between items-center mb-6">
-            <div class="bg-white rounded-lg shadow px-4 py-2 flex items-center">
-                <span class="font-semibold mr-2">Режим:</span>
-                <span id="status-text" class="text-blue-600 font-medium">Выберите слово</span>
-            </div>
-            <div id="score-container" class="bg-white rounded-lg shadow px-4 py-2">
-                <div class="flex items-center">
-                    <i class="fas fa-star text-yellow-500 mr-2"></i>
-                    <span class="font-semibold">Раунд:</span>
-                    <span id="round" class="ml-2 font-bold">1</span>
+            <p class="text-gray-500 mt-2">Учёт заказанных средств и форм оплаты. (перейти в&nbsp;<a href="https://art009bas.github.io/reestr/ ">Планер</a>)</p>
+        </header>
+        <main>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8 fade-in">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center cursor-pointer" id="new-report-header">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-plus-circle text-blue-500 mr-3"></i>
+                        Новый отчёт
+                    </h2>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform duration-300" id="new-report-chevron"></i>
+                </div>
+                <div class="collapsible-content" id="new-report-content">
+                    <div class="p-6">
+                        <form id="report-form">
+                            <div class="grid form-grid gap-4 md:grid-cols-2">
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 mb-2">Сумма</label>
+                                    <div class="relative">
+                                        <input type="number" id="amount" min="0" step="0.01" 
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent amount-input"
+                                               placeholder="0.00" required>
+                                        <span class="currency-label absolute right-3 top-2 text-gray-500">₽</span>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 mb-2">Дата</label>
+                                    <input type="date" id="date" 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           required>
+                                </div>
+                                <div class="mb-4 md:col-span-2">
+                                    <label class="block text-gray-700 mb-2">Форма оплаты</label>
+                                    <div class="grid grid-cols-2 gap-2 w-full">
+                                        <button type="button" class="payment-method-btn active px-4 py-2 border border-gray-300 rounded-lg" data-method="cash">
+                                            <i class="fas fa-money-bill-wave mr-2"></i> Нал
+                                        </button>
+                                        <button type="button" class="payment-method-btn px-4 py-2 border border-gray-300 rounded-lg" data-method="invoice">
+                                            <i class="fas fa-file-invoice mr-2"></i> Счёт
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="payment-method" value="cash" required>
+                                </div>
+                                <div class="mb-4 md:col-span-2">
+                                    <label class="flex items-center space-x-2">
+                                        <input type="checkbox" id="self-paid" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-gray-700">Оплачено собственными средствами</span>
+                                    </label>
+                                </div>
+                                <div class="mb-4 md:col-span-2">
+                                    <label class="block text-gray-700 mb-2">Комментарий</label>
+                                    <textarea id="comment" rows="3"
+                                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                              placeholder="На что были потрачены средства"></textarea>
+                                </div>
+                                <div class="mb-4 md:col-span-2">
+                                    <label class="block text-gray-700 mb-2">Документ (чек, счёт)</label>
+                                    <label for="file-upload" class="file-input-label flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                            <p class="mb-2 text-sm text-gray-500">
+                                                <span class="font-semibold">Нажмите для загрузки</span> или перетащите файл
+                                            </p>
+                                            <p class="text-xs text-gray-500">PNG, JPG, PDF (до 5MB)</p>
+                                        </div>
+                                        <input id="file-upload" type="file" class="hidden" accept="image/*,.pdf">
+                                    </label>
+                                    <div id="file-preview" class="mt-2 hidden">
+                                        <div class="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-file-image text-blue-500 mr-2 text-xl"></i>
+                                                <div>
+                                                    <p id="file-name" class="text-sm font-medium text-gray-700"></p>
+                                                    <p id="file-size" class="text-xs text-gray-500"></p>
+                                                </div>
+                                            </div>
+                                            <button type="button" id="remove-file" class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <img id="file-preview-image" class="file-preview-image mt-2 rounded-lg hidden">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end mt-6">
+                                <button type="submit" class="submit-btn px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
+                                    <i class="fas fa-save mr-2"></i> Сохранить отчёт
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Холст для рисования -->
-        <div id="drawing-section" class="mb-6">
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="bg-blue-600 text-white py-3 px-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold flex items-center">
-                        <i class="fas fa-paint-brush mr-2"></i> Рисуйте слово
+            <div class="bg-white rounded-xl shadow-md overflow-hidden fade-in">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-book text-blue-500 mr-3"></i>
+                        Журнал отчётов
                     </h2>
-                    <div id="word-to-draw" class="bg-white text-blue-600 font-bold px-3 py-1 rounded-full"></div>
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <select id="report-filter" class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                <option value="all">Все</option>
+                                <option value="cash">Нал</option>
+                                <option value="invoice">Счёт</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                <i class="fas fa-chevron-down text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <select id="status-filter" class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                <option value="all">Все статусы</option>
+                                <option value="not_ordered">Не заказано</option>
+                                <option value="ordered">Заказано</option>
+                                <option value="paid">Оплачено</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                <i class="fas fa-chevron-down text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="p-4">
-                    <canvas id="drawing-canvas" class="drawing-canvas w-full h-64 md:h-96 border border-gray-200"></canvas>
-                    
-                    <div class="controls-container flex flex-wrap justify-between items-center mt-4">
-                        <div class="flex space-x-2">
-                            <button id="clear-btn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition">
-                                <i class="fas fa-trash-alt mr-1"></i> Очистить
-                            </button>
-                            <button id="undo-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-lg transition">
-                                <i class="fas fa-undo mr-1"></i> Отменить
-                            </button>
+                    <div id="reports-list" class="space-y-3"></div>
+                    <div class="flex justify-between items-center mt-6 px-2">
+                        <button id="prev-page" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled>
+                            <i class="fas fa-chevron-left mr-2"></i> Назад
+                        </button>
+                        <span id="page-info" class="text-sm text-gray-600">Страница 1 из 1</span>
+                        <button id="next-page" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled>
+                            Вперед <i class="fas fa-chevron-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mt-8 fade-in">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-chart-pie text-blue-500 mr-3"></i>
+                        Статистика расходов
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div id="total-amount" class="text-2xl font-bold text-blue-600">0 ₽</div>
+                            <div class="text-gray-600 text-sm">Всего потрачено</div>
                         </div>
-                        
-                        <div class="color-palette flex space-x-2">
-                            <div class="color-option bg-black border-2 border-gray-300" data-color="black"></div>
-                            <div class="color-option bg-red-500 border-2 border-gray-300" data-color="red"></div>
-                            <div class="color-option bg-blue-500 border-2 border-gray-300" data-color="blue"></div>
-                            <div class="color-option bg-green-500 border-2 border-gray-300" data-color="green"></div>
-                            <div class="color-option bg-yellow-400 border-2 border-gray-300" data-color="yellow"></div>
-                            <div class="color-option bg-purple-500 border-2 border-gray-300" data-color="purple"></div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div id="monthly-amount" class="text-2xl font-bold text-green-600">0 ₽</div>
+                            <div class="text-gray-600 text-sm">За месяц</div>
                         </div>
-                        
-                        <div class="brush-options flex space-x-2">
-                            <div class="brush-option" data-size="2">
-                                <div style="width: 8px; height: 8px; background-color: black; border-radius: 50%;"></div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div id="self-paid-amount" class="text-2xl font-bold text-purple-600">0 ₽</div>
+                            <div class="text-gray-600 text-sm">Использование своих</div>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <div id="unpaid-self-amount" class="text-2xl font-bold text-red-600">0 ₽</div>
+                            <div class="text-gray-600 text-sm">Свои неоплаченные</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-md font-medium text-gray-700 mb-3">Распределение по месяцам</h3>
+                            <div id="monthly-chart" class="flex items-end h-40 space-x-2"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-md font-medium text-gray-700 mb-3">По формам оплаты</h3>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                    <span class="text-sm">Наличные</span>
+                                </div>
+                                <span id="cash-percent" class="text-sm font-medium">0%</span>
                             </div>
-                            <div class="brush-option" data-size="5">
-                                <div style="width: 12px; height: 12px; background-color: black; border-radius: 50%;"></div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span class="text-sm">Счета</span>
+                                </div>
+                                <span id="invoice-percent" class="text-sm font-medium">0%</span>
                             </div>
-                            <div class="brush-option" data-size="10">
-                                <div style="width: 16px; height: 16px; background-color: black; border-radius: 50%;"></div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-3">
+                                <div id="payment-method-chart" class="bg-gradient-to-r from-blue-500 to-green-500 h-2.5 rounded-full" style="width: 100%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Угадывание -->
-        <div id="guessing-section" class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-            <div class="bg-green-600 text-white py-3 px-4">
-                <h2 class="text-xl font-bold flex items-center">
-                    <i class="fas fa-search mr-2"></i> Угадайте слово
-                </h2>
-            </div>
-            <div class="p-4">
-                <div class="flex flex-col md:flex-row md:items-center md:space-x-4">
-                    <input type="text" id="guess-input" placeholder="Введите ваш вариант..." 
-                           class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 mb-2 md:mb-0">
-                    <button id="submit-guess" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition font-medium">
-                        <i class="fas fa-paper-plane mr-2"></i> Проверить
-                    </button>
-                </div>
-                
-                <div id="hint-container" class="mt-4 hidden">
-                    <div class="bg-yellow-100 border-l-4 border-yellow-500 p-3">
-                        <div class="flex items-center">
-                            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
-                            <p id="hint-text" class="text-yellow-700 font-medium">Подсказка: Первая буква - <span id="first-letter" class="font-bold"></span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Кнопка нового раунда -->
-        <div id="next-round-section" class="hidden">
-            <button id="next-round-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg transition font-medium text-lg pulse-animation">
-                <i class="fas fa-redo mr-2"></i> Следующее слово
-            </button>
-        </div>
-
-        <!-- Выбор слова -->
-        <div id="word-selection-section" class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-            <div class="bg-purple-600 text-white py-3 px-4">
-                <h2 class="text-xl font-bold flex items-center">
-                    <i class="fas fa-list-ul mr-2"></i> Выберите слово для рисования
-                </h2>
-            </div>
-            <div class="p-4">
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Солнце</button>
-                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Кошка</button>
-                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Велосипед</button>
-                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Самолет</button>
-                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Мороженое</button>
-                    <button class="word-card px-4 py-3 rounded-lg font-medium text-center transition">Случайное слово</button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Модальное окно помощи -->
-    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="bg-blue-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
-                <h3 class="text-lg font-bold">Помощь по игре</h3>
-                <button id="close-help-modal" class="text-white hover:text-gray-200">
+        </main>
+    </div>
+    <div id="document-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="document-modal-title"></h3>
+                <button id="close-document-modal" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="p-4">
-                <p class="mb-4">🎨 <strong>Как играть:</strong></p>
-                <ul class="list-disc pl-5 space-y-2">
-                    <li>Выберите слово из списка или получите случайное слово</li>
-                    <li>Нарисуйте выбранное слово на холсте</li>
-                    <li>Попробуйте угадать, что нарисовано (можно угадывать свое же слово)</li>
-                    <li>После угадывания начните новый раунд</li>
-                </ul>
-                <p class="mt-4 text-sm text-gray-600">Играйте в компании друзей или самостоятельно для тренировки!</p>
-            </div>
-            <div class="px-4 py-3 bg-gray-50 rounded-b-lg flex justify-end">
-                <button id="close-help-modal-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
-                    Понятно
-                </button>
+            <div class="p-4 overflow-y-auto flex items-center justify-center">
+                <img id="document-modal-image" class="max-w-full max-h-[70vh] rounded-lg" src="" alt="Документ">
             </div>
         </div>
     </div>
-
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Редактирование отчёта</h3>
+                <button id="close-edit-modal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="edit-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="grid form-grid gap-4 md:grid-cols-2">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 mb-2">Сумма</label>
+                            <div class="relative">
+                                <input type="number" id="edit-amount" min="0" step="0.01" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent amount-input"
+                                       placeholder="0.00" required>
+                                <span class="currency-label absolute right-3 top-2 text-gray-500">₽</span>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 mb-2">Дата</label>
+                            <input type="date" id="edit-date" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   required>
+                        </div>
+                        <div class="mb-4 md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Форма оплаты</label>
+                            <div class="grid grid-cols-2 gap-2 w-full">
+                                <button type="button" class="edit-payment-method-btn px-4 py-2 border border-gray-300 rounded-lg" data-method="cash">
+                                    <i class="fas fa-money-bill-wave mr-2"></i> Нал
+                                </button>
+                                <button type="button" class="edit-payment-method-btn px-4 py-2 border border-gray-300 rounded-lg" data-method="invoice">
+                                    <i class="fas fa-file-invoice mr-2"></i> Счёт
+                                </button>
+                            </div>
+                            <input type="hidden" id="edit-payment-method" value="cash" required>
+                        </div>
+                        <div class="mb-4 md:col-span-2">
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="edit-self-paid" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-gray-700">Оплачено собственными средствами</span>
+                            </label>
+                        </div>
+                        <div class="mb-4 md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Комментарий</label>
+                            <textarea id="edit-comment" rows="3"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      placeholder="На что были потрачены средства"></textarea>
+                        </div>
+                        <div class="mb-4 md:col-span-2">
+                            <label class="block text-gray-700 mb-2">Документ (чек, счёт)</label>
+                            <label for="edit-file-upload" class="file-input-label flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                    <p class="mb-2 text-sm text-gray-500">
+                                        <span class="font-semibold">Нажмите для загрузки</span> или перетащите файл
+                                    </p>
+                                    <p class="text-xs text-gray-500">PNG, JPG, PDF (до 5MB)</p>
+                                </div>
+                                <input id="edit-file-upload" type="file" class="hidden" accept="image/*,.pdf">
+                            </label>
+                            <div id="edit-file-preview" class="mt-2 hidden">
+                                <div class="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-file-image text-blue-500 mr-2 text-xl"></i>
+                                        <div>
+                                            <p id="edit-file-name" class="text-sm font-medium text-gray-700"></p>
+                                            <p id="edit-file-size" class="text-xs text-gray-500"></p>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="edit-remove-file" class="text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <img id="edit-file-preview-image" class="file-preview-image mt-2 rounded-lg hidden">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" id="cancel-edit" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center">
+                            <i class="fas fa-times mr-2"></i> Отмена
+                        </button>
+                        <button type="submit" class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
+                            <i class="fas fa-save mr-2"></i> Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Элементы интерфейса
-            const canvas = document.getElementById('drawing-canvas');
-            const ctx = canvas.getContext('2d');
-            const clearBtn = document.getElementById('clear-btn');
-            const undoBtn = document.getElementById('undo-btn');
-            const colorOptions = document.querySelectorAll('.color-option');
-            const brushOptions = document.querySelectorAll('.brush-option');
-            const guessInput = document.getElementById('guess-input');
-            const submitGuessBtn = document.getElementById('submit-guess');
-            const wordToDraw = document.getElementById('word-to-draw');
-            const statusText = document.getElementById('status-text');
-            const roundElement = document.getElementById('round');
-            const hintContainer = document.getElementById('hint-container');
-            const firstLetterElement = document.getElementById('first-letter');
-            const nextRoundBtn = document.getElementById('next-round-btn');
-            const nextRoundSection = document.getElementById('next-round-section');
-            const wordSelectionSection = document.getElementById('word-selection-section');
-            const wordCards = document.querySelectorAll('.word-card');
-            const helpBtn = document.getElementById('help-btn');
-            const helpModal = document.getElementById('help-modal');
-            const closeHelpModalBtn = document.getElementById('close-help-modal-btn');
-            const closeHelpModal = document.getElementById('close-help-modal');
-
-            // Настройка холста
-            function resizeCanvas() {
-                const container = canvas.parentElement;
-                canvas.width = container.offsetWidth;
-                canvas.height = container.offsetHeight;
-                redraw();
+        const API_URL = 'https://buh-reports-server.onrender.com/api';
+        const reportState = {
+            reports: [],
+            paymentMethod: 'cash',
+            status: 'not_ordered',
+            selfPaid: false,
+            currentPage: 1,
+            itemsPerPage: 5,
+            filter: 'all',
+            statusFilter: 'all',
+            editFile: null,
+            newReportExpanded: false
+        };
+        const reportElements = {
+            form: document.getElementById('report-form'),
+            amountInput: document.getElementById('amount'),
+            dateInput: document.getElementById('date'),
+            paymentMethodInput: document.getElementById('payment-method'),
+            paymentMethodBtns: document.querySelectorAll('.payment-method-btn'),
+            selfPaidInput: document.getElementById('self-paid'),
+            commentInput: document.getElementById('comment'),
+            fileUpload: document.getElementById('file-upload'),
+            filePreview: document.getElementById('file-preview'),
+            fileName: document.getElementById('file-name'),
+            fileSize: document.getElementById('file-size'),
+            filePreviewImage: document.getElementById('file-preview-image'),
+            removeFileBtn: document.getElementById('remove-file'),
+            reportsList: document.getElementById('reports-list'),
+            reportFilter: document.getElementById('report-filter'),
+            statusFilter: document.getElementById('status-filter'),
+            documentModal: document.getElementById('document-modal'),
+            documentModalTitle: document.getElementById('document-modal-title'),
+            documentModalImage: document.getElementById('document-modal-image'),
+            closeDocumentModalBtn: document.getElementById('close-document-modal'),
+            editModal: document.getElementById('edit-modal'),
+            editForm: document.getElementById('edit-form'),
+            editId: document.getElementById('edit-id'),
+            editAmount: document.getElementById('edit-amount'),
+            editDate: document.getElementById('edit-date'),
+            editPaymentMethodInput: document.getElementById('edit-payment-method'),
+            editPaymentMethodBtns: document.querySelectorAll('.edit-payment-method-btn'),
+            editSelfPaidInput: document.getElementById('edit-self-paid'),
+            editComment: document.getElementById('edit-comment'),
+            editFileUpload: document.getElementById('edit-file-upload'),
+            editFilePreview: document.getElementById('edit-file-preview'),
+            editFileName: document.getElementById('edit-file-name'),
+            editFileSize: document.getElementById('edit-file-size'),
+            editFilePreviewImage: document.getElementById('edit-file-preview-image'),
+            editRemoveFileBtn: document.getElementById('edit-remove-file'),
+            closeEditModalBtn: document.getElementById('close-edit-modal'),
+            cancelEditBtn: document.getElementById('cancel-edit'),
+            prevPageBtn: document.getElementById('prev-page'),
+            nextPageBtn: document.getElementById('next-page'),
+            pageInfo: document.getElementById('page-info'),
+            totalAmount: document.getElementById('total-amount'),
+            monthlyAmount: document.getElementById('monthly-amount'),
+            selfPaidAmount: document.getElementById('self-paid-amount'),
+            unpaidSelfAmount: document.getElementById('unpaid-self-amount'),
+            cashPercent: document.getElementById('cash-percent'),
+            invoicePercent: document.getElementById('invoice-percent'),
+            paymentMethodChart: document.getElementById('payment-method-chart'),
+            monthlyChart: document.getElementById('monthly-chart'),
+            newReportHeader: document.getElementById('new-report-header'),
+            newReportContent: document.getElementById('new-report-content'),
+            newReportChevron: document.getElementById('new-report-chevron')
+        };
+        async function initReports() {
+            const today = new Date().toISOString().split('T')[0];
+            if (reportElements.dateInput) reportElements.dateInput.value = today;
+            if (reportElements.editDate) reportElements.editDate.value = today;
+            await loadReportsFromServer();
+            setupReportEventListeners();
+            updatePagination();
+            toggleNewReportForm(false);
+        }
+        async function loadReportsFromServer() {
+            try {
+                const response = await fetch(`${API_URL}/reports`);
+                if (!response.ok) throw new Error('Ошибка загрузки отчётов');
+                reportState.reports = await response.json();
+                renderReports();
+                updateStatistics();
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showNotification('Не удалось загрузить отчёты. Проверьте подключение к интернету.', 'error');
             }
-
-            window.addEventListener('resize', resizeCanvas);
-            resizeCanvas();
-
-            // Переменные игры
-            let currentWord = '';
-            let isDrawing = false;
-            let lastX = 0;
-            let lastY = 0;
-            let currentColor = 'black';
-            let currentBrushSize = 5;
-            let drawingHistory = [];
-            let currentRound = 1;
-            let isGuessingMode = false;
-
-            // Инициализация холста
-            function initCanvas() {
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                drawingHistory = [];
+        }
+        async function updateStatistics() {
+            try {
+                const response = await fetch(`${API_URL}/reports/stats`);
+                if (!response.ok) throw new Error('Ошибка загрузки статистики');
+                const stats = await response.json();
+                reportElements.totalAmount.textContent = `${stats.totalAmount.toLocaleString('ru-RU')} ₽`;
+                reportElements.monthlyAmount.textContent = `${stats.monthlyAmount.toLocaleString('ru-RU')} ₽`;
+                reportElements.selfPaidAmount.textContent = `${stats.selfPaidAmount.toLocaleString('ru-RU')} ₽`;
+                reportElements.unpaidSelfAmount.textContent = `${stats.unpaidSelfAmount.toLocaleString('ru-RU')} ₽`;
+                const total = stats.totalAmount || 1;
+                const cashPercent = Math.round((stats.cashAmount / total) * 100);
+                const invoicePercent = Math.round((stats.invoiceAmount / total) * 100);
+                reportElements.cashPercent.textContent = `${cashPercent}%`;
+                reportElements.invoicePercent.textContent = `${invoicePercent}%`;
+                reportElements.paymentMethodChart.style.width = '100%';
+                reportElements.paymentMethodChart.style.background = `linear-gradient(to right, #3b82f6 ${cashPercent}%, #10b981 ${cashPercent}%)`;
+                updateMonthlyChart(stats.monthlyData);
+            } catch (error) {
+                console.error('Ошибка при загрузке статистики:', error);
             }
-
-            // Перерисовка холста
-            function redraw() {
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                if (drawingHistory.length > 0) {
-                    drawingHistory.forEach(path => {
-                        ctx.strokeStyle = path.color;
-                        ctx.lineWidth = path.size;
-                        ctx.lineJoin = 'round';
-                        ctx.lineCap = 'round';
-                        
-                        ctx.beginPath();
-                        path.points.forEach((point, i) => {
-                            if (i === 0) {
-                                ctx.moveTo(point.x, point.y);
-                            } else {
-                                ctx.lineTo(point.x, point.y);
-                            }
-                        });
-                        ctx.stroke();
-                    });
-                }
-            }
-
-            // Обработчики событий рисования
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('touchstart', handleTouchStart);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('touchmove', handleTouchMove);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseout', stopDrawing);
-            canvas.addEventListener('touchend', stopDrawing);
-
-            function startDrawing(e) {
-                isDrawing = true;
-                const pos = getPosition(e);
-                [lastX, lastY] = [pos.x, pos.y];
-                
-                // Начинаем новый путь
-                drawingHistory.push({
-                    color: currentColor,
-                    size: currentBrushSize,
-                    points: [{x: lastX, y: lastY}]
-                });
-            }
-
-            function handleTouchStart(e) {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousedown', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                });
-                startDrawing(mouseEvent);
-            }
-
-            function draw(e) {
-                if (!isDrawing) return;
-                
-                const pos = getPosition(e);
-                const currentPath = drawingHistory[drawingHistory.length - 1];
-                
-                // Рисуем линию
-                ctx.strokeStyle = currentPath.color;
-                ctx.lineWidth = currentPath.size;
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                
-                // Добавляем точку в текущий путь
-                currentPath.points.push({x: pos.x, y: pos.y});
-                
-                [lastX, lastY] = [pos.x, pos.y];
-            }
-
-            function handleTouchMove(e) {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousemove', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                });
-                draw(mouseEvent);
-            }
-
-            function stopDrawing() {
-                isDrawing = false;
-            }
-
-            function getPosition(e) {
-                const rect = canvas.getBoundingClientRect();
-                return {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-            }
-
-            // Очистка холста
-            clearBtn.addEventListener('click', function() {
-                initCanvas();
+        }
+        function updateMonthlyChart(monthlyData) {
+            reportElements.monthlyChart.innerHTML = '';
+            if (!monthlyData || monthlyData.length === 0) return;
+            const maxAmount = Math.max(...monthlyData.map(m => parseFloat(m.total || 0)), 1);
+            monthlyData.forEach(data => {
+                const heightPercent = (parseFloat(data.total || 0) / maxAmount) * 100;
+                const column = document.createElement('div');
+                column.className = 'flex-1 flex flex-col items-center';
+                column.innerHTML = `
+                    <div class="w-full bg-blue-200 rounded-t" style="height: ${heightPercent}%;"></div>
+                    <div class="text-xs text-gray-500 mt-1">${new Date(data.month + '-01').toLocaleDateString('ru-RU', { month: 'short' })}</div>
+                `;
+                reportElements.monthlyChart.appendChild(column);
             });
-
-            // Отмена последнего действия
-            undoBtn.addEventListener('click', function() {
-                if (drawingHistory.length > 0) {
-                    drawingHistory.pop();
-                    redraw();
-                }
-            });
-
-            // Выбор цвета
-            colorOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    currentColor = this.getAttribute('data-color');
-                    // Обновляем активный цвет
-                    colorOptions.forEach(opt => opt.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-500'));
-                    this.classList.add('ring-2', 'ring-offset-2', 'ring-blue-500');
-                });
-            });
-
-            // Выбор размера кисти
-            brushOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    currentBrushSize = parseInt(this.getAttribute('data-size'));
-                    // Обновляем активный размер
-                    brushOptions.forEach(opt => opt.classList.remove('bg-blue-100'));
-                    this.classList.add('bg-blue-100');
-                });
-            });
-
-            // Выбор слова
-            wordCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    let word = this.textContent.trim();
-                    
-                    if (word === 'Случайное слово') {
-                        const randomWords = ['Яблоко', 'Телефон', 'Дерево', 'Океан', 'Гитара', 'Фонарик', 'Зонтик', 'Книга', 'Часы', 'Футбол'];
-                        word = randomWords[Math.floor(Math.random() * randomWords.length)];
+        }
+        async function setupReportEventListeners() {
+            if (reportElements.form) {
+                reportElements.form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    let fileData = null;
+                    if (reportElements.fileUpload && reportElements.fileUpload.files[0]) {
+                        fileData = await getFileData(reportElements.fileUpload.files[0]);
                     }
-                    
-                    currentWord = word;
-                    wordToDraw.textContent = word;
-                    statusText.textContent = 'Рисуйте слово';
-                    
-                    // Скрываем выбор слова и показываем холст и угадывание
-                    wordSelectionSection.classList.add('hidden');
-                    drawingSection.classList.remove('hidden');
-                    guessingSection.classList.remove('hidden');
-                    
-                    // Очищаем холст
-                    initCanvas();
-                    
-                    // Скрываем кнопку следующего раунда
-                    nextRoundSection.classList.add('hidden');
-                    
-                    // Показываем первую букву как подсказку
-                    firstLetterElement.textContent = word[0];
-                    hintContainer.classList.remove('hidden');
+                    try {
+                        const response = await fetch(`${API_URL}/reports`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                amount: parseFloat(reportElements.amountInput.value),
+                                date: reportElements.dateInput.value,
+                                paymentMethod: reportState.paymentMethod,
+                                selfPaid: reportElements.selfPaidInput.checked,
+                                comment: reportElements.commentInput.value,
+                                fileName: reportElements.fileUpload?.files[0]?.name || '',
+                                fileSize: reportElements.fileUpload?.files[0] ? formatFileSize(reportElements.fileUpload.files[0].size) : '',
+                                fileType: reportElements.fileUpload?.files[0]?.type || '',
+                                fileData: fileData
+                            })
+                        });
+                        if (!response.ok) throw new Error('Ошибка при сохранении отчёта');
+                        await loadReportsFromServer();
+                        this.reset();
+                        if (reportElements.filePreview) reportElements.filePreview.classList.add('hidden');
+                        if (reportElements.filePreviewImage) reportElements.filePreviewImage.classList.add('hidden');
+                        if (reportElements.dateInput) reportElements.dateInput.value = new Date().toISOString().split('T')[0];
+                        if (reportElements.selfPaidInput) reportElements.selfPaidInput.checked = false;
+                        if (reportElements.paymentMethodBtns[0]) reportElements.paymentMethodBtns[0].click();
+                        showNotification('Отчёт успешно сохранён!', 'success');
+                        toggleNewReportForm();
+                    } catch (error) {
+                        console.error('Ошибка:', error);
+                        showNotification('Не удалось сохранить отчёт. Попробуйте позже.', 'error');
+                    }
+                });
+            }
+            if (reportElements.editForm) {
+                reportElements.editForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const reportId = parseInt(reportElements.editId.value);
+                    let fileData = null;
+                    if (reportState.editFile) {
+                        fileData = await getFileData(reportState.editFile);
+                    }
+                    try {
+                        const response = await fetch(`${API_URL}/reports/${reportId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                amount: parseFloat(reportElements.editAmount.value),
+                                date: reportElements.editDate.value,
+                                paymentMethod: reportElements.editPaymentMethodInput.value,
+                                selfPaid: reportElements.editSelfPaidInput.checked,
+                                comment: reportElements.editComment.value,
+                                fileName: reportState.editFile ? reportState.editFile.name : reportElements.editFileName.textContent,
+                                fileSize: reportState.editFile ? formatFileSize(reportState.editFile.size) : reportElements.editFileSize.textContent,
+                                fileType: reportState.editFile ? reportState.editFile.type : '',
+                                fileData: fileData
+                            })
+                        });
+                        if (!response.ok) throw new Error('Ошибка при обновлении отчёта');
+                        await loadReportsFromServer();
+                        reportElements.editModal.classList.add('hidden');
+                        reportState.editFile = null;
+                        showNotification('Отчёт успешно обновлён!', 'success');
+                    } catch (error) {
+                        console.error('Ошибка:', error);
+                        showNotification('Не удалось обновить отчёт. Попробуйте позже.', 'error');
+                    }
+                });
+            }
+            if (reportElements.closeEditModalBtn) {
+                reportElements.closeEditModalBtn.addEventListener('click', () => {
+                    reportElements.editModal.classList.add('hidden');
+                });
+            }
+            if (reportElements.cancelEditBtn) {
+                reportElements.cancelEditBtn.addEventListener('click', () => {
+                    reportElements.editModal.classList.add('hidden');
+                });
+            }
+            if (reportElements.editFileUpload) {
+                reportElements.editFileUpload.addEventListener('change', function(e) {
+                    if (this.files && this.files[0]) {
+                        const file = this.files[0];
+                        const fileSize = formatFileSize(file.size);
+                        reportElements.editFileName.textContent = file.name;
+                        reportElements.editFileSize.textContent = fileSize;
+                        reportElements.editFilePreview.classList.remove('hidden');
+                        reportState.editFile = file;
+                        if (file.type.match('image.*')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                reportElements.editFilePreviewImage.src = e.target.result;
+                                reportElements.editFilePreviewImage.classList.remove('hidden');
+                            }
+                            reader.readAsDataURL(file);
+                        } else {
+                            reportElements.editFilePreviewImage.classList.add('hidden');
+                        }
+                    }
+                });
+            }
+            if (reportElements.editRemoveFileBtn) {
+                reportElements.editRemoveFileBtn.addEventListener('click', () => {
+                    reportElements.editFileUpload.value = '';
+                    reportElements.editFilePreview.classList.add('hidden');
+                    reportElements.editFilePreviewImage.classList.add('hidden');
+                    reportState.editFile = null;
+                });
+            }
+            if (reportElements.prevPageBtn) {
+                reportElements.prevPageBtn.addEventListener('click', () => {
+                    if (reportState.currentPage > 1) {
+                        reportState.currentPage--;
+                        renderReports();
+                        updatePagination();
+                    }
+                });
+            }
+            if (reportElements.nextPageBtn) {
+                reportElements.nextPageBtn.addEventListener('click', () => {
+                    const filteredReports = getFilteredReports();
+                    const totalPages = Math.ceil(filteredReports.length / reportState.itemsPerPage);
+                    if (reportState.currentPage < totalPages) {
+                        reportState.currentPage++;
+                        renderReports();
+                        updatePagination();
+                    }
+                });
+            }
+            if (reportElements.newReportHeader) {
+                reportElements.newReportHeader.addEventListener('click', () => {
+                    toggleNewReportForm();
+                });
+            }
+            if (reportElements.reportFilter) {
+                reportElements.reportFilter.addEventListener('change', (e) => {
+                    reportState.filter = e.target.value;
+                    reportState.currentPage = 1;
+                    renderReports();
+                    updatePagination();
+                });
+            }
+            if (reportElements.statusFilter) {
+                reportElements.statusFilter.addEventListener('change', (e) => {
+                    reportState.statusFilter = e.target.value;
+                    reportState.currentPage = 1;
+                    renderReports();
+                    updatePagination();
+                });
+            }
+            if (reportElements.paymentMethodBtns) {
+                reportElements.paymentMethodBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        reportElements.paymentMethodBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        reportState.paymentMethod = btn.dataset.method;
+                        reportElements.paymentMethodInput.value = btn.dataset.method;
+                    });
+                });
+            }
+            if (reportElements.editPaymentMethodBtns) {
+                reportElements.editPaymentMethodBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        reportElements.editPaymentMethodBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        reportElements.editPaymentMethodInput.value = btn.dataset.method;
+                    });
+                });
+            }
+            if (reportElements.closeDocumentModalBtn) {
+                reportElements.closeDocumentModalBtn.addEventListener('click', () => {
+                    reportElements.documentModal.classList.add('hidden');
+                });
+            }
+        }
+        function toggleNewReportForm(forceState = null) {
+            if (forceState !== null) {
+                reportState.newReportExpanded = forceState;
+            } else {
+                reportState.newReportExpanded = !reportState.newReportExpanded;
+            }
+            if (reportState.newReportExpanded) {
+                reportElements.newReportContent.classList.add('expanded');
+                reportElements.newReportChevron.classList.add('rotate-180');
+            } else {
+                reportElements.newReportContent.classList.remove('expanded');
+                reportElements.newReportChevron.classList.remove('rotate-180');
+            }
+        }
+        function getFilteredReports() {
+            let filtered = [...reportState.reports];
+            if (reportState.filter !== 'all') {
+                filtered = filtered.filter(r => r.paymentMethod === reportState.filter);
+            }
+            if (reportState.statusFilter !== 'all') {
+                filtered = filtered.filter(r => r.status === reportState.statusFilter);
+            }
+            return filtered;
+        }
+        function getFileData(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    resolve(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        function formatFileSize(bytes) {
+            if (!bytes) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white animate-bounce ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>${message}`;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.classList.remove('animate-bounce');
+                notification.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+        function updatePagination() {
+            const filteredReports = getFilteredReports();
+            const totalPages = Math.ceil(filteredReports.length / reportState.itemsPerPage);
+            reportElements.pageInfo.textContent = `Страница ${reportState.currentPage} из ${totalPages || 1}`;
+            reportElements.prevPageBtn.disabled = reportState.currentPage <= 1;
+            reportElements.nextPageBtn.disabled = reportState.currentPage >= totalPages;
+            if (filteredReports.length === 0) {
+                reportElements.prevPageBtn.style.display = 'none';
+                reportElements.nextPageBtn.style.display = 'none';
+                reportElements.pageInfo.style.display = 'none';
+            } else {
+                reportElements.prevPageBtn.style.display = 'block';
+                reportElements.nextPageBtn.style.display = 'block';
+                reportElements.pageInfo.style.display = 'block';
+            }
+        }
+        function renderReports() {
+            const filteredReports = getFilteredReports();
+            const startIndex = (reportState.currentPage - 1) * reportState.itemsPerPage;
+            const endIndex = startIndex + reportState.itemsPerPage;
+            const paginatedReports = filteredReports.slice(startIndex, endIndex);
+            reportElements.reportsList.innerHTML = '';
+            if (paginatedReports.length === 0) {
+                reportElements.reportsList.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-inbox text-4xl mb-3"></i>
+                        <p>Нет отчётов</p>
+                    </div>
+                `;
+                return;
+            }
+            paginatedReports.forEach(report => {
+                const date = new Date(report.date);
+                const formattedDate = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                const paymentMethod = report.payment_method || report.paymentMethod;
+const paymentMethodClass = paymentMethod === 'cash' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+const paymentMethodIcon = paymentMethod === 'cash' ? 'fa-money-bill-wave' : 'fa-file-invoice';
+                let statusClass, statusIcon, statusText;
+                switch(report.status) {
+                    case 'not_ordered':
+                        statusClass = 'bg-gray-100 text-gray-800';
+                        statusIcon = 'fa-times-circle';
+                        statusText = 'Не заказано';
+                        break;
+                    case 'ordered':
+                        statusClass = 'bg-yellow-100 text-yellow-800';
+                        statusIcon = 'fa-shopping-cart';
+                        statusText = 'Заказано';
+                        break;
+                    case 'paid':
+                        statusClass = 'bg-green-100 text-green-800';
+                        statusIcon = 'fa-check-circle';
+                        statusText = 'Оплачено';
+                        break;
+                    default:
+                        statusClass = 'bg-gray-100 text-gray-800';
+                        statusIcon = 'fa-question-circle';
+                        statusText = 'Неизвестно';
+                }
+                const selfPaid = Boolean(report.self_paid || report.selfPaid); // поддержка обоих форматов
+const selfPaidBadge = selfPaid ? `
+    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full mr-2">
+        <i class="fas fa-user mr-1"></i> Свои
+    </span>
+` : '';
+                const filePreview = report.fileName ? `
+                    <button class="text-blue-500 hover:text-blue-700 text-sm flex items-center view-document-btn" 
+                            data-file-name="${report.fileName}" data-file-type="${report.fileType}" data-file-data="${report.fileData || ''}">
+                        <i class="fas fa-paperclip mr-1"></i> ${report.fileName}
+                    </button>
+                ` : '';
+                const reportElement = document.createElement('div');
+                reportElement.className = 'report-item bg-gray-50 p-4 rounded-lg border border-gray-200 slide-in';
+                reportElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-lg text-blue-600">${report.amount.toLocaleString('ru-RU')} ₽</div>
+                            <div class="text-sm text-gray-500 mb-1">${formattedDate}</div>
+                            <div class="text-sm text-gray-700 mb-2">${report.comment ? report.comment : ''}</div>
+                            <div class="flex flex-wrap items-center gap-1">
+                                <span class="px-2 py-1 ${paymentMethodClass} text-xs rounded-full">
+                                    <i class="fas ${paymentMethodIcon} mr-1"></i> ${report.paymentMethod === 'cash' ? 'Нал' : 'Счёт'}
+                                </span>
+                                <span class="status-badge px-2 py-1 ${statusClass} text-xs rounded-full" data-id="${report.id}">
+                                    <i class="fas ${statusIcon} mr-1"></i> ${statusText}
+                                </span>
+                                ${selfPaidBadge}
+                                ${filePreview}
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="edit-report-btn text-gray-400 hover:text-blue-500" data-id="${report.id}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="delete-report-btn text-gray-400 hover:text-red-500" data-id="${report.id}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                reportElements.reportsList.appendChild(reportElement);
+            });
+            document.querySelectorAll('.view-document-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const fileName = this.dataset.fileName;
+                    const fileType = this.dataset.fileType;
+                    const fileData = this.dataset.fileData;
+                    reportElements.documentModalTitle.textContent = fileName;
+                    if (fileType.match('image.*') && fileData) {
+                        reportElements.documentModalImage.src = fileData;
+                        reportElements.documentModalImage.classList.remove('hidden');
+                    } else {
+                        reportElements.documentModalImage.classList.add('hidden');
+                    }
+                    reportElements.documentModal.classList.remove('hidden');
                 });
             });
-
-            // Проверка угадывания
-            submitGuessBtn.addEventListener('click', checkGuess);
-            guessInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    checkGuess();
+            document.querySelectorAll('.edit-report-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const reportId = parseInt(this.dataset.id);
+                    openEditModal(reportId);
+                });
+            });
+            document.querySelectorAll('.delete-report-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const reportId = parseInt(this.dataset.id);
+                    if (confirm('Вы уверены, что хотите удалить этот отчёт?')) {
+                        try {
+                            const response = await fetch(`${API_URL}/reports/${reportId}`, { method: 'DELETE' });
+                            if (!response.ok) throw new Error('Ошибка при удалении отчёта');
+                            await loadReportsFromServer();
+                            showNotification('Отчёт удалён', 'success');
+                        } catch (error) {
+                            console.error('Ошибка:', error);
+                            showNotification('Не удалось удалить отчёт. Попробуйте позже.', 'error');
+                        }
+                    }
+                });
+            });
+            document.querySelectorAll('.status-badge').forEach(badge => {
+                badge.addEventListener('click', async function() {
+                    const reportId = parseInt(this.dataset.id);
+                    const report = reportState.reports.find(r => r.id === reportId);
+                    if (!report) return;
+                    let newStatus;
+                    switch(report.status) {
+                        case 'not_ordered': newStatus = 'ordered'; break;
+                        case 'ordered': newStatus = 'paid'; break;
+                        case 'paid': newStatus = 'not_ordered'; break;
+                        default: newStatus = 'not_ordered';
+                    }
+                    try {
+                        const response = await fetch(`${API_URL}/reports/${reportId}/status`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        if (!response.ok) throw new Error('Ошибка при обновлении статуса');
+                        await loadReportsFromServer();
+                        let statusText;
+                        switch(newStatus) {
+                            case 'not_ordered': statusText = 'Не заказано'; break;
+                            case 'ordered': statusText = 'Заказано'; break;
+                            case 'paid': statusText = 'Оплачено'; break;
+                        }
+                        showNotification(`Статус изменён на "${statusText}"`, 'success');
+                    } catch (error) {
+                        console.error('Ошибка:', error);
+                        showNotification('Не удалось изменить статус. Попробуйте позже.', 'error');
+                    }
+                });
+            });
+        }
+        function openEditModal(reportId) {
+            const report = reportState.reports.find(r => r.id === reportId);
+            if (!report) return;
+            reportElements.editId.value = report.id;
+            reportElements.editAmount.value = report.amount;
+            reportElements.editDate.value = report.date;
+            reportElements.editComment.value = report.comment || '';
+            reportElements.editSelfPaidInput.checked = report.selfPaid || false;
+            reportElements.editPaymentMethodBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.method === report.paymentMethod) {
+                    btn.classList.add('active');
+                    reportElements.editPaymentMethodInput.value = report.paymentMethod;
                 }
             });
-
-            function checkGuess() {
-                const guess = guessInput.value.trim().toLowerCase();
-                const correctWord = currentWord.toLowerCase();
-                
-                if (guess === correctWord) {
-                    statusText.textContent = 'Правильно!';
-                    statusText.classList.remove('text-blue-600');
-                    statusText.classList.add('text-green-600');
-                    
-                    // Показываем кнопку следующего раунда
-                    nextRoundSection.classList.remove('hidden');
+            if (report.fileName) {
+                reportElements.editFileName.textContent = report.fileName;
+                reportElements.editFileSize.textContent = report.fileSize;
+                reportElements.editFilePreview.classList.remove('hidden');
+                if (report.fileType.match('image.*') && report.fileData) {
+                    reportElements.editFilePreviewImage.src = report.fileData;
+                    reportElements.editFilePreviewImage.classList.remove('hidden');
                 } else {
-                    statusText.textContent = 'Неверно, попробуйте еще';
-                    statusText.classList.remove('text-blue-600');
-                    statusText.classList.add('text-red-600');
-                    
-                    // Показываем подсказку
-                    hintContainer.classList.remove('hidden');
+                    reportElements.editFilePreviewImage.classList.add('hidden');
                 }
+            } else {
+                reportElements.editFilePreview.classList.add('hidden');
+                reportElements.editFilePreviewImage.classList.add('hidden');
             }
-
-            // Следующий раунд
-            nextRoundBtn.addEventListener('click', function() {
-                currentRound++;
-                roundElement.textContent = currentRound;
-                
-                // Сбрасываем состояние
-                statusText.textContent = 'Выберите слово';
-                statusText.classList.remove('text-green-600', 'text-red-600');
-                statusText.classList.add('text-blue-600');
-                
-                guessInput.value = '';
-                hintContainer.classList.add('hidden');
-                
-                // Показываем выбор слова
-                wordSelectionSection.classList.remove('hidden');
-                drawingSection.classList.add('hidden');
-                guessingSection.classList.add('hidden');
-                nextRoundSection.classList.add('hidden');
-            });
-
-            // Помощь
-            helpBtn.addEventListener('click', function() {
-                helpModal.classList.remove('hidden');
-            });
-
-            closeHelpModalBtn.addEventListener('click', function() {
-                helpModal.classList.add('hidden');
-            });
-
-            closeHelpModal.addEventListener('click', function() {
-                helpModal.classList.add('hidden');
-            });
-
-            // Инициализация игры
-            initCanvas();
-            
-            // Скрываем холст и угадывание при старте
-            const drawingSection = document.getElementById('drawing-section');
-            const guessingSection = document.getElementById('guessing-section');
-            drawingSection.classList.add('hidden');
-            guessingSection.classList.add('hidden');
+            reportElements.editModal.classList.remove('hidden');
+        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initReports();
         });
     </script>
 </body>
