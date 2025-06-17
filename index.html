@@ -1,1059 +1,932 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчёт бухам</title>
-    <script src="https://cdn.tailwindcss.com "></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css ">
+    <title>Advanced Canvas Editor</title>
+    <script src="https://art009bas.github.io/reestr/tailwind.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideIn {
-            from { transform: translateX(20px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        .fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-        .slide-in {
-            animation: slideIn 0.3s ease-out forwards;
-        }
-        .file-input-label {
-            transition: all 0.3s ease;
-        }
-        .file-input-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .file-preview-image {
-            max-height: 150px;
-            object-fit: contain;
-        }
-        .payment-method-btn, .status-btn {
-            transition: all 0.2s ease;
-        }
-        .payment-method-btn.active, .status-btn.active {
-            background-color: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        .amount-input:focus + .currency-label {
-            border-color: #3b82f6;
-        }
-        .status-badge {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .status-badge:hover {
-            transform: scale(1.05);
-        }
-        .collapsible-content {
-            max-height: 0;
+        .canvas-container {
+            position: relative;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
+            background-image: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
-        .collapsible-content.expanded {
-            max-height: 1000px;
+        
+        .canvas-grid {
+            background-image: linear-gradient(#ddd 1px, transparent 1px),
+                              linear-gradient(90deg, #ddd 1px, transparent 1px);
+            background-size: 20px 20px;
         }
-        @media (max-width: 640px) {
-            .form-grid {
-                grid-template-columns: 1fr;
+        
+        .element {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+        }
+        
+        .element.selected {
+            outline: 2px dashed #3b82f6;
+        }
+        
+        .element-group {
+            position: absolute;
+            border: 1px dashed #999;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            z-index: 10;
+        }
+        
+        .rotate-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .rotate-handle i {
+            color: #3b82f6;
+            font-size: 10px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .tool-btn:hover .tooltip {
+            opacity: 1;
+        }
+        
+        .layer-item.selected {
+            background-color: #e0e7ff;
+        }
+        
+        .shape-preview {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .toolbar-icon {
+                padding: 0.25rem;
             }
-            .submit-btn {
-                width: 100%;
+            .property-panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 200px;
+                overflow-y: auto;
             }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <header class="mb-6">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
-                    <i class="fas fa-file-invoice-dollar text-blue-500 mr-3"></i>
-                    Отчёт бухам
-                </h1>
-                <!-- Блок авторизации -->
-<div id="auth-container" class="flex justify-between items-center mb-6">
-  <div id="telegram-login-container" class="mb-0">
-    <script async src="https://telegram.org/js/telegram-widget.js?22 " 
-            data-telegram-login="your_bot_username"
-            data-size="medium"
-            data-auth-url="https://your-site.com/auth/telegram "
-            data-request-access="write">
-    </script>
-  </div>
+<body class="bg-gray-100 font-sans flex flex-col h-screen">
+    <!-- Top Toolbar -->
+    <div class="bg-white shadow-md px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-bold text-blue-600">Advanced Canvas Editor</h1>
+            <div class="flex space-x-2">
+                <button id="new-project" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center">
+                    <i class="fas fa-file mr-2"></i> New
+                </button>
+                <button id="save-project" class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded flex items-center">
+                    <i class="fas fa-save mr-2"></i> Save
+                </button>
+                <div class="relative">
+                    <button id="export-btn" class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded flex items-center">
+                        <i class="fas fa-download mr-2"></i> Export
+                    </button>
+                    <div id="export-menu" class="hidden absolute left-0 mt-1 w-40 bg-white shadow-lg rounded-md z-10">
+                        <button class="export-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-type="png">PNG</button>
+                        <button class="export-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-type="jpeg">JPEG</button>
+                        <button class="export-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-type="json">JSON</button>
+                        <button class="export-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-type="pdf">PDF</button>
+                        <button class="export-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-type="svg">SVG</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button id="undo-btn" class="p-2 text-gray-600 hover:text-gray-900" title="Undo (Ctrl+Z)">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button id="redo-btn" class="p-2 text-gray-600 hover:text-gray-900" title="Redo (Ctrl+Shift+Z)">
+                <i class="fas fa-redo"></i>
+            </button>
+            <div class="flex items-center">
+                <button id="zoom-out" class="p-2 text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <span id="zoom-level" class="mx-2 text-sm">100%</span>
+                <button id="zoom-in" class="p-2 text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+            </div>
+            <div class="relative">
+                <button id="canvas-size" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center">
+                    <i class="fas fa-expand mr-2"></i> 800x600
+                </button>
+                <div id="size-menu" class="hidden absolute right-0 mt-1 w-48 bg-white shadow-lg rounded-md z-10">
+                    <div class="px-4 py-2 font-medium text-gray-700">Presets</div>
+                    <button class="size-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-width="1080" data-height="1080">Instagram Post (1080x1080)</button>
+                    <button class="size-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-width="1280" data-height="720">YouTube Thumbnail (1280x720)</button>
+                    <button class="size-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-width="800" data-height="600">Default (800x600)</button>
+                    <div class="border-t border-gray-200 px-4 py-2">
+                        <div class="text-sm font-medium text-gray-700 mb-1">Custom Size</div>
+                        <div class="flex space-x-2">
+                            <input type="number" id="custom-width" class="w-16 px-2 py-1 border rounded" placeholder="Width" value="800">
+                            <span class="flex items-center">x</span>
+                            <input type="number" id="custom-height" class="w-16 px-2 py-1 border rounded" placeholder="Height" value="600">
+                        </div>
+                        <button id="apply-custom-size" class="mt-2 w-full px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">Apply</button>
+                    </div>
+                </div>
+            </div>
+            <button id="toggle-snap" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center">
+                <i class="fas fa-magnet mr-2"></i> Snap
+            </button>
+        </div>
+    </div>
 
-  <!-- Профиль пользователя -->
-  <div id="user-profile" class="hidden flex items-center space-x-2">
-    <img id="user-avatar" src="" alt="Аватар" class="w-8 h-8 rounded-full">
-    <span id="user-name" class="font-medium text-gray-700"></span>
-  </div>
-</div>
-            </div>
-            <p class="text-gray-500 mt-2">Учёт заказанных средств и форм оплаты. (перейти в&nbsp;<a href="https://art009bas.github.io/reestr/ ">Планер</a>)</p>
-        </header>
-        <main>
-            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8 fade-in">
-                <div class="p-6 border-b border-gray-200 flex justify-between items-center cursor-pointer" id="new-report-header">
-                    <h2 class="text-xl font-semibold text-gray-800">
-                        <i class="fas fa-plus-circle text-blue-500 mr-3"></i>
-                        Новый отчёт
-                    </h2>
-                    <i class="fas fa-chevron-down text-gray-400 transition-transform duration-300" id="new-report-chevron"></i>
-                </div>
-                <div class="collapsible-content" id="new-report-content">
-                    <div class="p-6">
-                        <form id="report-form">
-                            <div class="grid form-grid gap-4 md:grid-cols-2">
-                                <div class="mb-4">
-                                    <label class="block text-gray-700 mb-2">Сумма</label>
-                                    <div class="relative">
-                                        <input type="number" id="amount" min="0" step="0.01" 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent amount-input"
-                                               placeholder="0.00" required>
-                                        <span class="currency-label absolute right-3 top-2 text-gray-500">₽</span>
-                                    </div>
-                                </div>
-                                <div class="mb-4">
-                                    <label class="block text-gray-700 mb-2">Дата</label>
-                                    <input type="date" id="date" 
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                           required>
-                                </div>
-                                <div class="mb-4 md:col-span-2">
-                                    <label class="block text-gray-700 mb-2">Форма оплаты</label>
-                                    <div class="grid grid-cols-2 gap-2 w-full">
-                                        <button type="button" class="payment-method-btn active px-4 py-2 border border-gray-300 rounded-lg" data-method="cash">
-                                            <i class="fas fa-money-bill-wave mr-2"></i> Нал
-                                        </button>
-                                        <button type="button" class="payment-method-btn px-4 py-2 border border-gray-300 rounded-lg" data-method="invoice">
-                                            <i class="fas fa-file-invoice mr-2"></i> Счёт
-                                        </button>
-                                    </div>
-                                    <input type="hidden" id="payment-method" value="cash" required>
-                                </div>
-                                <div class="mb-4 md:col-span-2">
-                                    <label class="flex items-center space-x-2">
-                                        <input type="checkbox" id="self-paid" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                        <span class="text-gray-700">Оплачено собственными средствами</span>
-                                    </label>
-                                </div>
-                                <div class="mb-4 md:col-span-2">
-                                    <label class="block text-gray-700 mb-2">Комментарий</label>
-                                    <textarea id="comment" rows="3"
-                                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                              placeholder="На что были потрачены средства"></textarea>
-                                </div>
-                                <div class="mb-4 md:col-span-2">
-                                    <label class="block text-gray-700 mb-2">Документ (чек, счёт)</label>
-                                    <label for="file-upload" class="file-input-label flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                                            <p class="mb-2 text-sm text-gray-500">
-                                                <span class="font-semibold">Нажмите для загрузки</span> или перетащите файл
-                                            </p>
-                                            <p class="text-xs text-gray-500">PNG, JPG, PDF (до 5MB)</p>
-                                        </div>
-                                        <input id="file-upload" type="file" class="hidden" accept="image/*,.pdf">
-                                    </label>
-                                    <div id="file-preview" class="mt-2 hidden">
-                                        <div class="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
-                                            <div class="flex items-center">
-                                                <i class="fas fa-file-image text-blue-500 mr-2 text-xl"></i>
-                                                <div>
-                                                    <p id="file-name" class="text-sm font-medium text-gray-700"></p>
-                                                    <p id="file-size" class="text-xs text-gray-500"></p>
-                                                </div>
-                                            </div>
-                                            <button type="button" id="remove-file" class="text-red-500 hover:text-red-700">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                        <img id="file-preview-image" class="file-preview-image mt-2 rounded-lg hidden">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex justify-end mt-6">
-                                <button type="submit" class="submit-btn px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
-                                    <i class="fas fa-save mr-2"></i> Сохранить отчёт
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow-md overflow-hidden fade-in">
-                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                    <h2 class="text-xl font-semibold text-gray-800">
-                        <i class="fas fa-book text-blue-500 mr-3"></i>
-                        Журнал отчётов
-                    </h2>
-                    <div class="flex items-center space-x-2">
-                        <div class="relative">
-                            <select id="report-filter" class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                                <option value="all">Все</option>
-                                <option value="cash">Нал</option>
-                                <option value="invoice">Счёт</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                <i class="fas fa-chevron-down text-gray-400"></i>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <select id="status-filter" class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                                <option value="all">Все статусы</option>
-                                <option value="not_ordered">Не заказано</option>
-                                <option value="ordered">Заказано</option>
-                                <option value="paid">Оплачено</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                <i class="fas fa-chevron-down text-gray-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-4">
-                    <div id="reports-list" class="space-y-3"></div>
-                    <div class="flex justify-between items-center mt-6 px-2">
-                        <button id="prev-page" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled>
-                            <i class="fas fa-chevron-left mr-2"></i> Назад
-                        </button>
-                        <span id="page-info" class="text-sm text-gray-600">Страница 1 из 1</span>
-                        <button id="next-page" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled>
-                            Вперед <i class="fas fa-chevron-right ml-2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow-md overflow-hidden mt-8 fade-in">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-800">
-                        <i class="fas fa-chart-pie text-blue-500 mr-3"></i>
-                        Статистика расходов
-                    </h2>
-                </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <div id="total-amount" class="text-2xl font-bold text-blue-600">0 ₽</div>
-                            <div class="text-gray-600 text-sm">Всего потрачено</div>
-                        </div>
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <div id="monthly-amount" class="text-2xl font-bold text-green-600">0 ₽</div>
-                            <div class="text-gray-600 text-sm">За месяц</div>
-                        </div>
-                        <div class="bg-purple-50 p-4 rounded-lg">
-                            <div id="self-paid-amount" class="text-2xl font-bold text-purple-600">0 ₽</div>
-                            <div class="text-gray-600 text-sm">Использование своих</div>
-                        </div>
-                        <div class="bg-red-50 p-4 rounded-lg">
-                            <div id="unpaid-self-amount" class="text-2xl font-bold text-red-600">0 ₽</div>
-                            <div class="text-gray-600 text-sm">Свои неоплаченные</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h3 class="text-md font-medium text-gray-700 mb-3">Распределение по месяцам</h3>
-                            <div id="monthly-chart" class="flex items-end h-40 space-x-2"></div>
-                        </div>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h3 class="text-md font-medium text-gray-700 mb-3">По формам оплаты</h3>
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center">
-                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                                    <span class="text-sm">Наличные</span>
-                                </div>
-                                <span id="cash-percent" class="text-sm font-medium">0%</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                                    <span class="text-sm">Счета</span>
-                                </div>
-                                <span id="invoice-percent" class="text-sm font-medium">0%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-3">
-                                <div id="payment-method-chart" class="bg-gradient-to-r from-blue-500 to-green-500 h-2.5 rounded-full" style="width: 100%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-    <div id="document-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden fade-in">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-800" id="document-modal-title"></h3>
-                <button id="close-document-modal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
+    <!-- Main Content -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Left Sidebar - Tools -->
+        <div class="w-16 bg-white shadow-md flex flex-col items-center py-4 space-y-4">
+            <div class="relative">
+                <button class="tool-btn active" data-tool="select" title="Select (V)">
+                    <i class="fas fa-mouse-pointer text-blue-600"></i>
+                    <div class="tooltip">Select (V)</div>
                 </button>
             </div>
-            <div class="p-4 overflow-y-auto flex items-center justify-center">
-                <img id="document-modal-image" class="max-w-full max-h-[70vh] rounded-lg" src="" alt="Документ">
+            
+            <div class="relative">
+                <button class="tool-btn" data-tool="text" title="Text (T)">
+                    <i class="fas fa-font"></i>
+                    <div class="tooltip">Text (T)</div>
+                </button>
+            </div>
+            
+            <div class="relative">
+                <button class="tool-btn" data-tool="image" title="Image (I)">
+                    <i class="fas fa-image"></i>
+                    <div class="tooltip">Image (I)</div>
+                </button>
+            </div>
+            
+            <div class="relative group">
+                <button class="tool-btn" data-tool="shape" title="Shapes (S)">
+                    <i class="fas fa-square"></i>
+                    <div class="tooltip">Shapes (S)</div>
+                </button>
+                <div class="hidden group-hover:block absolute left-full ml-2 top-0 w-48 bg-white shadow-lg rounded-md z-10">
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center" data-shape="rectangle">
+                        <div class="shape-preview mr-2"><div style="width:16px;height:16px;background:#3b82f6;"></div></div>
+                        Rectangle
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center" data-shape="circle">
+                        <div class="shape-preview mr-2"><div style="width:16px;height:16px;background:#3b82f6;border-radius:50%;"></div></div>
+                        Circle
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center" data-shape="triangle">
+                        <div class="shape-preview mr-2"><div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:16px solid #3b82f6;"></div></div>
+                        Triangle
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center" data-shape="line">
+                        <div class="shape-preview mr-2"><div style="width:16px;height:2px;background:#3b82f6;margin-top:7px;"></div></div>
+                        Line
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center" data-shape="star">
+                        <div class="shape-preview mr-2"><i class="fas fa-star text-yellow-400"></i></div>
+                        Star
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center" data-shape="hexagon">
+                        <div class="shape-preview mr-2"><i class="fas fa-hexagon text-purple-500"></i></div>
+                        Hexagon
+                    </button>
+                </div>
+            </div>
+            
+            <div class="relative">
+                <button class="tool-btn" data-tool="icon" title="Icons">
+                    <i class="fas fa-icons"></i>
+                    <div class="tooltip">Icons</div>
+                </button>
+            </div>
+            
+            <div class="border-t border-gray-200 w-8 mx-auto my-2"></div>
+            
+            <div class="relative">
+                <button class="tool-btn" data-tool="move" title="Move Canvas (H)">
+                    <i class="fas fa-hand-paper"></i>
+                    <div class="tooltip">Move Canvas (H)</div>
+                </button>
+            </div>
+            
+            <div class="relative">
+                <button id="toggle-grid" class="tool-btn" title="Toggle Grid (G)">
+                    <i class="fas fa-th"></i>
+                    <div class="tooltip">Toggle Grid (G)</div>
+                </button>
+            </div>
+            
+            <div class="relative">
+                <button id="toggle-rulers" class="tool-btn" title="Toggle Rulers (R)">
+                    <i class="fas fa-ruler-combined"></i>
+                    <div class="tooltip">Toggle Rulers (R)</div>
+                </button>
+            </div>
+            
+            <div class="border-t border-gray-200 w-8 mx-auto my-2"></div>
+            
+            <div class="relative">
+                <button id="group-btn" class="tool-btn" title="Group (Ctrl+G)">
+                    <i class="fas fa-object-group"></i>
+                    <div class="tooltip">Group (Ctrl+G)</div>
+                </button>
+            </div>
+            
+            <div class="relative">
+                <button id="ungroup-btn" class="tool-btn" title="Ungroup (Ctrl+Shift+G)">
+                    <i class="fas fa-object-ungroup"></i>
+                    <div class="tooltip">Ungroup (Ctrl+Shift+G)</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="flex-1 relative overflow-auto">
+            <div id="canvas-container" class="canvas-container mx-auto bg-white shadow-lg relative">
+                <div id="canvas-rulers" class="hidden absolute top-0 left-0 right-0 h-8 bg-gray-100 border-b border-gray-300">
+                    <!-- Horizontal ruler marks will be added here -->
+                </div>
+                <div id="canvas-ruler-vertical" class="hidden absolute top-0 left-0 bottom-0 w-8 bg-gray-100 border-r border-gray-300">
+                    <!-- Vertical ruler marks will be added here -->
+                </div>
+                <div id="canvas" class="canvas-grid relative" style="width: 800px; height: 600px;">
+                    <!-- Elements will be added here -->
+                </div>
+                <div id="canvas-overlay" class="absolute inset-0 pointer-events-none"></div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Properties and Layers -->
+        <div class="flex">
+            <!-- Layers Panel -->
+            <div id="layers-panel" class="w-48 bg-white shadow-md overflow-y-auto p-4 border-r border-gray-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-lg">Layers</h3>
+                    <button id="toggle-layers" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                </div>
+                
+                <div id="layers-list" class="space-y-1">
+                    <!-- Layers will be added here dynamically -->
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button id="add-layer" class="w-full px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">
+                        <i class="fas fa-plus mr-1"></i> Add Layer
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Properties Panel -->
+            <div id="property-panel" class="w-64 bg-white shadow-md overflow-y-auto p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-lg">Properties</h3>
+                    <button id="close-properties" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div id="element-properties">
+                    <!-- Properties will be added here dynamically -->
+                </div>
             </div>
         </div>
     </div>
-    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto fade-in">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-800">Редактирование отчёта</h3>
-                <button id="close-edit-modal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <form id="edit-form">
-                    <input type="hidden" id="edit-id">
-                    <div class="grid form-grid gap-4 md:grid-cols-2">
-                        <div class="mb-4">
-                            <label class="block text-gray-700 mb-2">Сумма</label>
-                            <div class="relative">
-                                <input type="number" id="edit-amount" min="0" step="0.01" 
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent amount-input"
-                                       placeholder="0.00" required>
-                                <span class="currency-label absolute right-3 top-2 text-gray-500">₽</span>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-gray-700 mb-2">Дата</label>
-                            <input type="date" id="edit-date" 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                   required>
-                        </div>
-                        <div class="mb-4 md:col-span-2">
-                            <label class="block text-gray-700 mb-2">Форма оплаты</label>
-                            <div class="grid grid-cols-2 gap-2 w-full">
-                                <button type="button" class="edit-payment-method-btn px-4 py-2 border border-gray-300 rounded-lg" data-method="cash">
-                                    <i class="fas fa-money-bill-wave mr-2"></i> Нал
-                                </button>
-                                <button type="button" class="edit-payment-method-btn px-4 py-2 border border-gray-300 rounded-lg" data-method="invoice">
-                                    <i class="fas fa-file-invoice mr-2"></i> Счёт
-                                </button>
-                            </div>
-                            <input type="hidden" id="edit-payment-method" value="cash" required>
-                        </div>
-                        <div class="mb-4 md:col-span-2">
-                            <label class="flex items-center space-x-2">
-                                <input type="checkbox" id="edit-self-paid" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                <span class="text-gray-700">Оплачено собственными средствами</span>
-                            </label>
-                        </div>
-                        <div class="mb-4 md:col-span-2">
-                            <label class="block text-gray-700 mb-2">Комментарий</label>
-                            <textarea id="edit-comment" rows="3"
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                      placeholder="На что были потрачены средства"></textarea>
-                        </div>
-                        <div class="mb-4 md:col-span-2">
-                            <label class="block text-gray-700 mb-2">Документ (чек, счёт)</label>
-                            <label for="edit-file-upload" class="file-input-label flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                                    <p class="mb-2 text-sm text-gray-500">
-                                        <span class="font-semibold">Нажмите для загрузки</span> или перетащите файл
-                                    </p>
-                                    <p class="text-xs text-gray-500">PNG, JPG, PDF (до 5MB)</p>
-                                </div>
-                                <input id="edit-file-upload" type="file" class="hidden" accept="image/*,.pdf">
-                            </label>
-                            <div id="edit-file-preview" class="mt-2 hidden">
-                                <div class="flex items-center justify-between bg-gray-100 p-2 rounded-lg">
-                                    <div class="flex items-center">
-                                        <i class="fas fa-file-image text-blue-500 mr-2 text-xl"></i>
-                                        <div>
-                                            <p id="edit-file-name" class="text-sm font-medium text-gray-700"></p>
-                                            <p id="edit-file-size" class="text-xs text-gray-500"></p>
-                                        </div>
-                                    </div>
-                                    <button type="button" id="edit-remove-file" class="text-red-500 hover:text-red-700">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                                <img id="edit-file-preview-image" class="file-preview-image mt-2 rounded-lg hidden">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" id="cancel-edit" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center">
-                            <i class="fas fa-times mr-2"></i> Отмена
-                        </button>
-                        <button type="submit" class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center">
-                            <i class="fas fa-save mr-2"></i> Сохранить изменения
-                        </button>
-                    </div>
-                </form>
-            </div>
+
+    <!-- Bottom Status Bar -->
+    <div class="bg-gray-800 text-white px-4 py-2 flex justify-between items-center text-sm">
+        <div class="flex space-x-4">
+            <span id="cursor-position">X: 0, Y: 0</span>
+            <span id="selected-element">No element selected</span>
+            <span id="snap-status">Snap: Off</span>
+        </div>
+        <div>
+            <span id="zoom-status">Zoom: 100%</span>
         </div>
     </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="image-upload" accept="image/*" class="hidden">
+    <input type="file" id="background-upload" accept="image/*" class="hidden">
+
+    <!-- Modals -->
+    <div id="new-project-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <!-- Modal content -->
+    </div>
+
+    <div id="icon-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <!-- Modal content -->
+    </div>
+
     <script>
-        const API_URL = 'https://buh-reports-server.onrender.com/api';
-        const reportState = {
-            reports: [],
-            paymentMethod: 'cash',
-            status: 'not_ordered',
-            selfPaid: false,
-            currentPage: 1,
-            itemsPerPage: 5,
-            filter: 'all',
-            statusFilter: 'all',
-            editFile: null,
-            newReportExpanded: false
+        // Enhanced state management
+        const state = {
+            currentTool: 'select',
+            selectedElement: null,
+            selectedElements: [],
+            elements: [],
+            groups: [],
+            layers: [
+                { id: 'layer-1', name: 'Layer 1', visible: true, locked: false, order: 0 }
+            ],
+            activeLayer: 'layer-1',
+            zoom: 1,
+            canvasWidth: 800,
+            canvasHeight: 600,
+            history: [],
+            historyIndex: -1,
+            isDragging: false,
+            isResizing: false,
+            isRotating: false,
+            isMovingCanvas: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            initialElementX: 0,
+            initialElementY: 0,
+            initialElementWidth: 0,
+            initialElementHeight: 0,
+            initialRotation: 0,
+            resizeHandle: null,
+            snapToGrid: false,
+            snapToObjects: true,
+            showGrid: false,
+            showRulers: false,
+            nextId: 1,
+            nextGroupId: 1,
+            nextLayerId: 2
         };
-        const reportElements = {
-            form: document.getElementById('report-form'),
-            amountInput: document.getElementById('amount'),
-            dateInput: document.getElementById('date'),
-            paymentMethodInput: document.getElementById('payment-method'),
-            paymentMethodBtns: document.querySelectorAll('.payment-method-btn'),
-            selfPaidInput: document.getElementById('self-paid'),
-            commentInput: document.getElementById('comment'),
-            fileUpload: document.getElementById('file-upload'),
-            filePreview: document.getElementById('file-preview'),
-            fileName: document.getElementById('file-name'),
-            fileSize: document.getElementById('file-size'),
-            filePreviewImage: document.getElementById('file-preview-image'),
-            removeFileBtn: document.getElementById('remove-file'),
-            reportsList: document.getElementById('reports-list'),
-            reportFilter: document.getElementById('report-filter'),
-            statusFilter: document.getElementById('status-filter'),
-            documentModal: document.getElementById('document-modal'),
-            documentModalTitle: document.getElementById('document-modal-title'),
-            documentModalImage: document.getElementById('document-modal-image'),
-            closeDocumentModalBtn: document.getElementById('close-document-modal'),
-            editModal: document.getElementById('edit-modal'),
-            editForm: document.getElementById('edit-form'),
-            editId: document.getElementById('edit-id'),
-            editAmount: document.getElementById('edit-amount'),
-            editDate: document.getElementById('edit-date'),
-            editPaymentMethodInput: document.getElementById('edit-payment-method'),
-            editPaymentMethodBtns: document.querySelectorAll('.edit-payment-method-btn'),
-            editSelfPaidInput: document.getElementById('edit-self-paid'),
-            editComment: document.getElementById('edit-comment'),
-            editFileUpload: document.getElementById('edit-file-upload'),
-            editFilePreview: document.getElementById('edit-file-preview'),
-            editFileName: document.getElementById('edit-file-name'),
-            editFileSize: document.getElementById('edit-file-size'),
-            editFilePreviewImage: document.getElementById('edit-file-preview-image'),
-            editRemoveFileBtn: document.getElementById('edit-remove-file'),
-            closeEditModalBtn: document.getElementById('close-edit-modal'),
-            cancelEditBtn: document.getElementById('cancel-edit'),
-            prevPageBtn: document.getElementById('prev-page'),
-            nextPageBtn: document.getElementById('next-page'),
-            pageInfo: document.getElementById('page-info'),
-            totalAmount: document.getElementById('total-amount'),
-            monthlyAmount: document.getElementById('monthly-amount'),
-            selfPaidAmount: document.getElementById('self-paid-amount'),
-            unpaidSelfAmount: document.getElementById('unpaid-self-amount'),
-            cashPercent: document.getElementById('cash-percent'),
-            invoicePercent: document.getElementById('invoice-percent'),
-            paymentMethodChart: document.getElementById('payment-method-chart'),
-            monthlyChart: document.getElementById('monthly-chart'),
-            newReportHeader: document.getElementById('new-report-header'),
-            newReportContent: document.getElementById('new-report-content'),
-            newReportChevron: document.getElementById('new-report-chevron')
-        };
-        async function initReports() {
-            const today = new Date().toISOString().split('T')[0];
-            if (reportElements.dateInput) reportElements.dateInput.value = today;
-            if (reportElements.editDate) reportElements.editDate.value = today;
-            await loadReportsFromServer();
-            setupReportEventListeners();
-            updatePagination();
-            toggleNewReportForm(false);
+
+        // DOM elements
+        const canvas = document.getElementById('canvas');
+        const canvasContainer = document.getElementById('canvas-container');
+        const propertyPanel = document.getElementById('property-panel');
+        const layersPanel = document.getElementById('layers-panel');
+        const layersList = document.getElementById('layers-list');
+        const cursorPosition = document.getElementById('cursor-position');
+        const selectedElementText = document.getElementById('selected-element');
+        const zoomLevel = document.getElementById('zoom-level');
+        const zoomStatus = document.getElementById('zoom-status');
+        const snapStatus = document.getElementById('snap-status');
+        const canvasRulers = document.getElementById('canvas-rulers');
+        const canvasRulerVertical = document.getElementById('canvas-ruler-vertical');
+        const toggleGridBtn = document.getElementById('toggle-grid');
+        const toggleRulersBtn = document.getElementById('toggle-rulers');
+        const toggleSnapBtn = document.getElementById('toggle-snap');
+        const groupBtn = document.getElementById('group-btn');
+        const ungroupBtn = document.getElementById('ungroup-btn');
+        const imageUpload = document.getElementById('image-upload');
+        const backgroundUpload = document.getElementById('background-upload');
+        const newProjectModal = document.getElementById('new-project-modal');
+        const iconModal = document.getElementById('icon-modal');
+        const iconGrid = document.getElementById('icon-grid');
+        const addLayerBtn = document.getElementById('add-layer');
+
+        // Initialize the canvas
+        function initCanvas() {
+            updateCanvasSize();
+            loadProject();
+            setupEventListeners();
+            updateUI();
+            updateLayersList();
         }
-        async function loadReportsFromServer() {
-    try {
-        const response = await fetch(`${API_URL}/reports`);
-        if (!response.ok) throw new Error('Ошибка загрузки отчётов');
-        // Сортировка от последнего к первому по дате
-        reportState.reports = (await response.json()).sort((a, b) => 
-            new Date(b.date) - new Date(a.date)
-        );
-        renderReports();
-        updateStatistics();
-    } catch (error) {
-        console.error('Ошибка:', error);
-        showNotification('Не удалось загрузить отчёты.', 'error');
-    }
-}
-        async function updateStatistics() {
-            try {
-                const response = await fetch(`${API_URL}/reports/stats`);
-                if (!response.ok) throw new Error('Ошибка загрузки статистики');
-                const stats = await response.json();
-                reportElements.totalAmount.textContent = `${stats.totalAmount.toLocaleString('ru-RU')} ₽`;
-                reportElements.monthlyAmount.textContent = `${stats.monthlyAmount.toLocaleString('ru-RU')} ₽`;
-                reportElements.selfPaidAmount.textContent = `${stats.selfPaidAmount.toLocaleString('ru-RU')} ₽`;
-                reportElements.unpaidSelfAmount.textContent = `${stats.unpaidSelfAmount.toLocaleString('ru-RU')} ₽`;
-                const total = stats.totalAmount || 1;
-                const cashPercent = Math.round((stats.cashAmount / total) * 100);
-                const invoicePercent = Math.round((stats.invoiceAmount / total) * 100);
-                reportElements.cashPercent.textContent = `${cashPercent}%`;
-                reportElements.invoicePercent.textContent = `${invoicePercent}%`;
-                reportElements.paymentMethodChart.style.width = '100%';
-                reportElements.paymentMethodChart.style.background = `linear-gradient(to right, #3b82f6 ${cashPercent}%, #10b981 ${cashPercent}%)`;
-                updateMonthlyChart(stats.monthlyData);
-            } catch (error) {
-                console.error('Ошибка при загрузке статистики:', error);
-            }
-        }
-        function updateMonthlyChart(monthlyData) {
-            reportElements.monthlyChart.innerHTML = '';
-            if (!monthlyData || monthlyData.length === 0) return;
-            const maxAmount = Math.max(...monthlyData.map(m => parseFloat(m.total || 0)), 1);
-            monthlyData.forEach(data => {
-                const heightPercent = (parseFloat(data.total || 0) / maxAmount) * 100;
-                const column = document.createElement('div');
-                column.className = 'flex-1 flex flex-col items-center';
-                column.innerHTML = `
-                    <div class="w-full bg-blue-200 rounded-t" style="height: ${heightPercent}%;"></div>
-                    <div class="text-xs text-gray-500 mt-1">${new Date(data.month + '-01').toLocaleDateString('ru-RU', { month: 'short' })}</div>
-                `;
-                reportElements.monthlyChart.appendChild(column);
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Tool buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    state.currentTool = this.dataset.tool;
+                    
+                    if (state.currentTool === 'image') {
+                        imageUpload.click();
+                    }
+                });
             });
-        }
-        async function setupReportEventListeners() {
-            if (reportElements.form) {
-                reportElements.form.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    let fileData = null;
-                    if (reportElements.fileUpload && reportElements.fileUpload.files[0]) {
-                        fileData = await getFileData(reportElements.fileUpload.files[0]);
-                    }
-                    try {
-                        const response = await fetch(`${API_URL}/reports`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                amount: parseFloat(reportElements.amountInput.value),
-                                date: reportElements.dateInput.value,
-                                paymentMethod: reportState.paymentMethod,
-                                selfPaid: reportElements.selfPaidInput.checked,
-                                comment: reportElements.commentInput.value,
-                                fileName: reportElements.fileUpload?.files[0]?.name || '',
-                                fileSize: reportElements.fileUpload?.files[0] ? formatFileSize(reportElements.fileUpload.files[0].size) : '',
-                                fileType: reportElements.fileUpload?.files[0]?.type || '',
-                                fileData: fileData
-                            })
-                        });
-                        if (!response.ok) throw new Error('Ошибка при сохранении отчёта');
-                        await loadReportsFromServer();
-                        this.reset();
-                        if (reportElements.filePreview) reportElements.filePreview.classList.add('hidden');
-                        if (reportElements.filePreviewImage) reportElements.filePreviewImage.classList.add('hidden');
-                        if (reportElements.dateInput) reportElements.dateInput.value = new Date().toISOString().split('T')[0];
-                        if (reportElements.selfPaidInput) reportElements.selfPaidInput.checked = false;
-                        if (reportElements.paymentMethodBtns[0]) reportElements.paymentMethodBtns[0].click();
-                        showNotification('Отчёт успешно сохранён!', 'success');
-                        toggleNewReportForm();
-                    } catch (error) {
-                        console.error('Ошибка:', error);
-                        showNotification('Не удалось сохранить отчёт. Попробуйте позже.', 'error');
-                    }
+
+            // Shape options
+            document.querySelectorAll('.shape-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    addShape(this.dataset.shape);
                 });
-            }
-            if (reportElements.editForm) {
-                reportElements.editForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    const reportId = parseInt(reportElements.editId.value);
-                    let fileData = null;
-                    if (reportState.editFile) {
-                        fileData = await getFileData(reportState.editFile);
-                    }
-                    try {
-                        const response = await fetch(`${API_URL}/reports/${reportId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                amount: parseFloat(reportElements.editAmount.value),
-                                date: reportElements.editDate.value,
-                                paymentMethod: reportElements.editPaymentMethodInput.value,
-                                selfPaid: reportElements.editSelfPaidInput.checked,
-                                comment: reportElements.editComment.value,
-                                fileName: reportState.editFile ? reportState.editFile.name : reportElements.editFileName.textContent,
-                                fileSize: reportState.editFile ? formatFileSize(reportState.editFile.size) : reportElements.editFileSize.textContent,
-                                fileType: reportState.editFile ? reportState.editFile.type : '',
-                                fileData: fileData
-                            })
-                        });
-                        if (!response.ok) throw new Error('Ошибка при обновлении отчёта');
-                        await loadReportsFromServer();
-                        reportElements.editModal.classList.add('hidden');
-                        reportState.editFile = null;
-                        showNotification('Отчёт успешно обновлён!', 'success');
-                    } catch (error) {
-                        console.error('Ошибка:', error);
-                        showNotification('Не удалось обновить отчёт. Попробуйте позже.', 'error');
-                    }
-                });
-            }
-            if (reportElements.closeEditModalBtn) {
-                reportElements.closeEditModalBtn.addEventListener('click', () => {
-                    reportElements.editModal.classList.add('hidden');
-                });
-            }
-            if (reportElements.cancelEditBtn) {
-                reportElements.cancelEditBtn.addEventListener('click', () => {
-                    reportElements.editModal.classList.add('hidden');
-                });
-            }
-            if (reportElements.editFileUpload) {
-                reportElements.editFileUpload.addEventListener('change', function(e) {
-                    if (this.files && this.files[0]) {
-                        const file = this.files[0];
-                        const fileSize = formatFileSize(file.size);
-                        reportElements.editFileName.textContent = file.name;
-                        reportElements.editFileSize.textContent = fileSize;
-                        reportElements.editFilePreview.classList.remove('hidden');
-                        reportState.editFile = file;
-                        if (file.type.match('image.*')) {
-                            const reader = new FileReader();
-                            reader.onload = function(e) {
-                                reportElements.editFilePreviewImage.src = e.target.result;
-                                reportElements.editFilePreviewImage.classList.remove('hidden');
-                            }
-                            reader.readAsDataURL(file);
-                        } else {
-                            reportElements.editFilePreviewImage.classList.add('hidden');
-                        }
-                    }
-                });
-            }
-            if (reportElements.editRemoveFileBtn) {
-                reportElements.editRemoveFileBtn.addEventListener('click', () => {
-                    reportElements.editFileUpload.value = '';
-                    reportElements.editFilePreview.classList.add('hidden');
-                    reportElements.editFilePreviewImage.classList.add('hidden');
-                    reportState.editFile = null;
-                });
-            }
-            if (reportElements.prevPageBtn) {
-                reportElements.prevPageBtn.addEventListener('click', () => {
-                    if (reportState.currentPage > 1) {
-                        reportState.currentPage--;
-                        renderReports();
-                        updatePagination();
-                    }
-                });
-            }
-            if (reportElements.nextPageBtn) {
-                reportElements.nextPageBtn.addEventListener('click', () => {
-                    const filteredReports = getFilteredReports();
-                    const totalPages = Math.ceil(filteredReports.length / reportState.itemsPerPage);
-                    if (reportState.currentPage < totalPages) {
-                        reportState.currentPage++;
-                        renderReports();
-                        updatePagination();
-                    }
-                });
-            }
-            if (reportElements.newReportHeader) {
-                reportElements.newReportHeader.addEventListener('click', () => {
-                    toggleNewReportForm();
-                });
-            }
-            if (reportElements.reportFilter) {
-                reportElements.reportFilter.addEventListener('change', (e) => {
-                    reportState.filter = e.target.value;
-                    reportState.currentPage = 1;
-                    renderReports();
-                    updatePagination();
-                });
-            }
-            if (reportElements.statusFilter) {
-                reportElements.statusFilter.addEventListener('change', (e) => {
-                    reportState.statusFilter = e.target.value;
-                    reportState.currentPage = 1;
-                    renderReports();
-                    updatePagination();
-                });
-            }
-            if (reportElements.paymentMethodBtns) {
-                reportElements.paymentMethodBtns.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        reportElements.paymentMethodBtns.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        reportState.paymentMethod = btn.dataset.method;
-                        reportElements.paymentMethodInput.value = btn.dataset.method;
-                    });
-                });
-            }
-            if (reportElements.editPaymentMethodBtns) {
-                reportElements.editPaymentMethodBtns.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        reportElements.editPaymentMethodBtns.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        reportElements.editPaymentMethodInput.value = btn.dataset.method;
-                    });
-                });
-            }
-            if (reportElements.closeDocumentModalBtn) {
-                reportElements.closeDocumentModalBtn.addEventListener('click', () => {
-                    reportElements.documentModal.classList.add('hidden');
-                });
-            }
-        }
-        function toggleNewReportForm(forceState = null) {
-            if (forceState !== null) {
-                reportState.newReportExpanded = forceState;
-            } else {
-                reportState.newReportExpanded = !reportState.newReportExpanded;
-            }
-            if (reportState.newReportExpanded) {
-                reportElements.newReportContent.classList.add('expanded');
-                reportElements.newReportChevron.classList.add('rotate-180');
-            } else {
-                reportElements.newReportContent.classList.remove('expanded');
-                reportElements.newReportChevron.classList.remove('rotate-180');
-            }
-        }
-        function getFilteredReports() {
-            let filtered = [...reportState.reports];
-            if (reportState.filter !== 'all') {
-                filtered = filtered.filter(r => r.paymentMethod === reportState.filter);
-            }
-            if (reportState.statusFilter !== 'all') {
-                filtered = filtered.filter(r => r.status === reportState.statusFilter);
-            }
-            return filtered;
-        }
-        function getFileData(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    resolve(e.target.result);
-                };
-                reader.readAsDataURL(file);
             });
+
+            // Canvas size options
+            document.querySelectorAll('.size-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    state.canvasWidth = parseInt(this.dataset.width);
+                    state.canvasHeight = parseInt(this.dataset.height);
+                    updateCanvasSize();
+                    document.getElementById('canvas-size').textContent = `${state.canvasWidth}x${state.canvasHeight}`;
+                    document.getElementById('size-menu').classList.add('hidden');
+                });
+            });
+
+            // Apply custom size
+            document.getElementById('apply-custom-size').addEventListener('click', function() {
+                const width = parseInt(document.getElementById('custom-width').value);
+                const height = parseInt(document.getElementById('custom-height').value);
+                
+                if (width > 0 && height > 0) {
+                    state.canvasWidth = width;
+                    state.canvasHeight = height;
+                    updateCanvasSize();
+                    document.getElementById('canvas-size').textContent = `${state.canvasWidth}x${state.canvasHeight}`;
+                    document.getElementById('size-menu').classList.add('hidden');
+                }
+            });
+
+            // Canvas events
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+            canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
+            
+            // Touch events
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd);
+
+            // Zoom buttons
+            document.getElementById('zoom-in').addEventListener('click', zoomIn);
+            document.getElementById('zoom-out').addEventListener('click', zoomOut);
+            
+            // Toggle buttons
+            toggleGridBtn.addEventListener('click', toggleGrid);
+            toggleRulersBtn.addEventListener('click', toggleRulers);
+            toggleSnapBtn.addEventListener('click', toggleSnap);
+            
+            // Grouping
+            groupBtn.addEventListener('click', groupSelectedElements);
+            ungroupBtn.addEventListener('click', ungroupSelectedElements);
+            
+            // Layers
+            addLayerBtn.addEventListener('click', addNewLayer);
+            
+            // Image upload
+            imageUpload.addEventListener('change', handleImageUpload);
+            backgroundUpload.addEventListener('change', handleBackgroundUpload);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
         }
-        function formatFileSize(bytes) {
-            if (!bytes) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white animate-bounce ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
-            notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.classList.remove('animate-bounce');
-                notification.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-        function updatePagination() {
-            const filteredReports = getFilteredReports();
-            const totalPages = Math.ceil(filteredReports.length / reportState.itemsPerPage);
-            reportElements.pageInfo.textContent = `Страница ${reportState.currentPage} из ${totalPages || 1}`;
-            reportElements.prevPageBtn.disabled = reportState.currentPage <= 1;
-            reportElements.nextPageBtn.disabled = reportState.currentPage >= totalPages;
-            if (filteredReports.length === 0) {
-                reportElements.prevPageBtn.style.display = 'none';
-                reportElements.nextPageBtn.style.display = 'none';
-                reportElements.pageInfo.style.display = 'none';
-            } else {
-                reportElements.prevPageBtn.style.display = 'block';
-                reportElements.nextPageBtn.style.display = 'block';
-                reportElements.pageInfo.style.display = 'block';
-            }
-        }
-        function renderReports() {
-            const filteredReports = getFilteredReports();
-            const startIndex = (reportState.currentPage - 1) * reportState.itemsPerPage;
-            const endIndex = startIndex + reportState.itemsPerPage;
-            const paginatedReports = filteredReports.slice(startIndex, endIndex);
-            reportElements.reportsList.innerHTML = '';
-            if (paginatedReports.length === 0) {
-                reportElements.reportsList.innerHTML = `
-                    <div class="text-center py-8 text-gray-400">
-                        <i class="fas fa-inbox text-4xl mb-3"></i>
-                        <p>Нет отчётов</p>
-                    </div>
-                `;
+
+        // Handle canvas mouse down
+        function handleCanvasMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / state.zoom;
+            const y = (e.clientY - rect.top) / state.zoom;
+            
+            if (state.currentTool === 'move') {
+                state.isMovingCanvas = true;
+                state.dragStartX = e.clientX;
+                state.dragStartY = e.clientY;
                 return;
             }
-            paginatedReports.forEach(report => {
-                const date = new Date(report.date);
-                const formattedDate = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-                const paymentMethod = report.payment_method || report.paymentMethod;
-const paymentMethodClass = paymentMethod === 'cash' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
-const paymentMethodIcon = paymentMethod === 'cash' ? 'fa-money-bill-wave' : 'fa-file-invoice';
-                let statusClass, statusIcon, statusText;
-                switch(report.status) {
-                    case 'not_ordered':
-                        statusClass = 'bg-gray-100 text-gray-800';
-                        statusIcon = 'fa-times-circle';
-                        statusText = 'Не заказано';
-                        break;
-                    case 'ordered':
-                        statusClass = 'bg-yellow-100 text-yellow-800';
-                        statusIcon = 'fa-shopping-cart';
-                        statusText = 'Заказано';
-                        break;
-                    case 'paid':
-                        statusClass = 'bg-green-100 text-green-800';
-                        statusIcon = 'fa-check-circle';
-                        statusText = 'Оплачено';
-                        break;
-                    default:
-                        statusClass = 'bg-gray-100 text-gray-800';
-                        statusIcon = 'fa-question-circle';
-                        statusText = 'Неизвестно';
+
+            // Check if clicking on a resize handle
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const handles = element.querySelectorAll('.resize-handle');
+                
+                handles.forEach(handle => {
+                    const handleRect = handle.getBoundingClientRect();
+                    if (e.clientX >= handleRect.left && e.clientX <= handleRect.right && 
+                        e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
+                        state.isResizing = true;
+                        state.resizeHandle = handle.dataset.handle;
+                        state.initialElementWidth = parseInt(element.style.width);
+                        state.initialElementHeight = parseInt(element.style.height);
+                        state.dragStartX = x;
+                        state.dragStartY = y;
+                        return;
+                    }
+                });
+                
+                // Check rotate handle
+                const rotateHandle = element.querySelector('.rotate-handle');
+                if (rotateHandle) {
+                    const handleRect = rotateHandle.getBoundingClientRect();
+                    if (e.clientX >= handleRect.left && e.clientX <= handleRect.right && 
+                        e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
+                        state.isRotating = true;
+                        state.initialRotation = parseFloat(element.dataset.rotation || 0);
+                        const elementRect = element.getBoundingClientRect();
+                        const centerX = elementRect.left + elementRect.width / 2;
+                        const centerY = elementRect.top + elementRect.height / 2;
+                        state.dragStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+                        return;
+                    }
                 }
-                const selfPaid = Boolean(report.self_paid || report.selfPaid); // поддержка обоих форматов
-const selfPaidBadge = selfPaid ? `
-    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full mr-2">
-        <i class="fas fa-user mr-1"></i> Свои
-    </span>
-` : '';
-                const filePreview = report.fileName ? `
-                    <button class="text-blue-500 hover:text-blue-700 text-sm flex items-center view-document-btn" 
-                            data-file-name="${report.fileName}" data-file-type="${report.fileType}" data-file-data="${report.fileData || ''}">
-                        <i class="fas fa-paperclip mr-1"></i> ${report.fileName}
-                    </button>
-                ` : '';
-                const reportElement = document.createElement('div');
-                reportElement.className = 'report-item bg-gray-50 p-4 rounded-lg border border-gray-200 slide-in';
-                reportElement.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="font-bold text-lg text-blue-600">${Math.round(report.amount).toLocaleString('ru-RU')} ₽</div>
-                            <div class="text-sm text-gray-500 mb-1">${formattedDate}</div>
-                            <div class="text-sm text-gray-700 mb-2">${report.comment ? report.comment : ''}</div>
-                            <div class="flex flex-wrap items-center gap-1">
-                                <span class="px-2 py-1 ${paymentMethodClass} text-xs rounded-full">
-                                    <i class="fas ${paymentMethodIcon} mr-1"></i> ${paymentMethod === 'cash' ? 'Нал' : 'Счёт'}
-                                </span>
-                                <span class="status-badge px-2 py-1 ${statusClass} text-xs rounded-full" data-id="${report.id}">
-                                    <i class="fas ${statusIcon} mr-1"></i> ${statusText}
-                                </span>
-                                ${selfPaidBadge}
-                                ${filePreview}
-                            </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button class="edit-report-btn text-gray-400 hover:text-blue-500" data-id="${report.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="delete-report-btn text-gray-400 hover:text-red-500" data-id="${report.id}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
+            }
+            
+            if (!state.isResizing && !state.isRotating) {
+                const clickedElement = findElementAtPosition(x, y);
+                
+                if (clickedElement) {
+                    // Multi-select with Shift key
+                    if (e.shiftKey) {
+                        if (state.selectedElements.includes(clickedElement.id)) {
+                            state.selectedElements = state.selectedElements.filter(id => id !== clickedElement.id);
+                            clickedElement.classList.remove('selected');
+                        } else {
+                            state.selectedElements.push(clickedElement.id);
+                            clickedElement.classList.add('selected');
+                        }
+                        state.selectedElement = clickedElement.id;
+                    } else {
+                        // Single select
+                        deselectAllElements();
+                        selectElement(clickedElement.id);
+                    }
+                    
+                    state.isDragging = true;
+                    state.dragStartX = x;
+                    state.dragStartY = y;
+                    state.initialElementX = parseInt(clickedElement.style.left);
+                    state.initialElementY = parseInt(clickedElement.style.top);
+                } else {
+                    deselectAllElements();
+                    
+                    if (state.currentTool === 'text') {
+                        addTextElement(x, y);
+                    } else if (state.currentTool === 'shape') {
+                        addShape('rectangle', x, y);
+                    } else if (state.currentTool === 'icon') {
+                        showIconModal(x, y);
+                    }
+                }
+            }
+            
+            e.preventDefault();
+        }
+
+        // Handle canvas mouse move
+        function handleCanvasMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / state.zoom;
+            const y = (e.clientY - rect.top) / state.zoom;
+            
+            cursorPosition.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+            
+            if (state.isMovingCanvas) {
+                const dx = e.clientX - state.dragStartX;
+                const dy = e.clientY - state.dragStartY;
+                canvasContainer.scrollLeft -= dx;
+                canvasContainer.scrollTop -= dy;
+                state.dragStartX = e.clientX;
+                state.dragStartY = e.clientY;
+                return;
+            }
+            
+            if (state.isDragging && state.selectedElement) {
+                const dx = x - state.dragStartX;
+                const dy = y - state.dragStartY;
+                
+                let newX = state.initialElementX + dx;
+                let newY = state.initialElementY + dy;
+                
+                // Snap to grid
+                if (state.snapToGrid) {
+                    newX = Math.round(newX / 10) * 10;
+                    newY = Math.round(newY / 10) * 10;
+                }
+                
+                // Snap to objects
+                if (state.snapToObjects) {
+                    const snapThreshold = 10;
+                    let snapX = null, snapY = null;
+                    
+                    state.elements.forEach(el => {
+                        if (el.id === state.selectedElement) return;
+                        
+                        const element = document.getElementById(el.id);
+                        if (!element) return;
+                        
+                        const elX = parseInt(element.style.left);
+                        const elY = parseInt(element.style.top);
+                        const elWidth = parseInt(element.style.width);
+                        const elHeight = parseInt(element.style.height);
+                        
+                        // Check for snap points (edges and centers)
+                        const snapPoints = [
+                            { x: elX, y: elY }, // top-left
+                            { x: elX + elWidth/2, y: elY }, // top-center
+                            { x: elX + elWidth, y: elY }, // top-right
+                            { x: elX, y: elY + elHeight/2 }, // middle-left
+                            { x: elX + elWidth/2, y: elY + elHeight/2 }, // center
+                            { x: elX + elWidth, y: elY + elHeight/2 }, // middle-right
+                            { x: elX, y: elY + elHeight }, // bottom-left
+                            { x: elX + elWidth/2, y: elY + elHeight }, // bottom-center
+                            { x: elX + elWidth, y: elY + elHeight } // bottom-right
+                        ];
+                        
+                        snapPoints.forEach(point => {
+                            if (Math.abs(newX - point.x) < snapThreshold) snapX = point.x;
+                            if (Math.abs(newY - point.y) < snapThreshold) snapY = point.y;
+                        });
+                    });
+                    
+                    if (snapX !== null) newX = snapX;
+                    if (snapY !== null) newY = snapY;
+                }
+                
+                // Move single element
+                const element = document.getElementById(state.selectedElement);
+                if (element) {
+                    element.style.left = `${newX}px`;
+                    element.style.top = `${newY}px`;
+                }
+                
+                // Move multiple selected elements
+                if (state.selectedElements.length > 1) {
+                    state.selectedElements.forEach(id => {
+                        if (id === state.selectedElement) return;
+                        const el = document.getElementById(id);
+                        if (el) {
+                            const initialX = parseInt(el.dataset.initialX || el.style.left);
+                            const initialY = parseInt(el.dataset.initialY || el.style.top);
+                            el.style.left = `${initialX + dx}px`;
+                            el.style.top = `${initialY + dy}px`;
+                        }
+                    });
+                }
+                
+                updatePropertyPanel();
+            }
+            
+            if (state.isResizing && state.selectedElement) {
+                // ... (existing resize code)
+            }
+            
+            if (state.isRotating && state.selectedElement) {
+                // ... (existing rotate code)
+            }
+        }
+
+        // Group selected elements
+        function groupSelectedElements() {
+            if (state.selectedElements.length < 2) return;
+            
+            const groupId = `group-${state.nextGroupId++}`;
+            const elements = state.selectedElements.map(id => document.getElementById(id));
+            
+            // Calculate group bounds
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            elements.forEach(el => {
+                const x = parseInt(el.style.left);
+                const y = parseInt(el.style.top);
+                const width = parseInt(el.style.width);
+                const height = parseInt(el.style.height);
+                
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + width);
+                maxY = Math.max(maxY, y + height);
+            });
+            
+            // Create group container
+            const group = document.createElement('div');
+            group.id = groupId;
+            group.className = 'element-group';
+            group.style.left = `${minX}px`;
+            group.style.top = `${minY}px`;
+            group.style.width = `${maxX - minX}px`;
+            group.style.height = `${maxY - minY}px`;
+            group.dataset.type = 'group';
+            group.dataset.elements = JSON.stringify(state.selectedElements);
+            
+            // Reposition elements relative to group
+            elements.forEach(el => {
+                const x = parseInt(el.style.left) - minX;
+                const y = parseInt(el.style.top) - minY;
+                el.style.position = 'relative';
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+                el.dataset.group = groupId;
+                group.appendChild(el);
+            });
+            
+            // Add group to canvas
+            canvas.appendChild(group);
+            
+            // Update state
+            state.groups.push({
+                id: groupId,
+                elements: state.selectedElements
+            });
+            
+            // Select the group
+            deselectAllElements();
+            selectElement(groupId);
+            
+            saveToHistory();
+        }
+
+        // Ungroup selected elements
+        function ungroupSelectedElements() {
+            if (!state.selectedElement) return;
+            
+            const group = document.getElementById(state.selectedElement);
+            if (!group || group.dataset.type !== 'group') return;
+            
+            const elements = JSON.parse(group.dataset.elements);
+            const groupX = parseInt(group.style.left);
+            const groupY = parseInt(group.style.top);
+            
+            // Move elements back to canvas and update their positions
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const x = parseInt(el.style.left) + groupX;
+                    const y = parseInt(el.style.top) + groupY;
+                    
+                    el.style.position = 'absolute';
+                    el.style.left = `${x}px`;
+                    el.style.top = `${y}px`;
+                    delete el.dataset.group;
+                    
+                    canvas.appendChild(el);
+                }
+            });
+            
+            // Remove group from state and DOM
+            state.groups = state.groups.filter(g => g.id !== state.selectedElement);
+            group.remove();
+            
+            // Select first element from the group
+            if (elements.length > 0) {
+                selectElement(elements[0]);
+            }
+            
+            saveToHistory();
+        }
+
+        // Add new layer
+        function addNewLayer() {
+            const layerId = `layer-${state.nextLayerId++}`;
+            const layerName = `Layer ${state.nextLayerId - 1}`;
+            
+            state.layers.push({
+                id: layerId,
+                name: layerName,
+                visible: true,
+                locked: false,
+                order: state.layers.length
+            });
+            
+            updateLayersList();
+            saveToHistory();
+        }
+
+        // Update layers list UI
+        function updateLayersList() {
+            layersList.innerHTML = '';
+            
+            // Sort layers by order (reverse for display)
+            const sortedLayers = [...state.layers].sort((a, b) => b.order - a.order);
+            
+            sortedLayers.forEach(layer => {
+                const layerItem = document.createElement('div');
+                layerItem.className = `layer-item flex items-center justify-between p-2 rounded ${state.activeLayer === layer.id ? 'selected' : ''}`;
+                layerItem.dataset.layerId = layer.id;
+                
+                layerItem.innerHTML = `
+                    <div class="flex items-center">
+                        <button class="layer-visibility mr-2 text-gray-500 hover:text-gray-700">
+                            <i class="fas ${layer.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        </button>
+                        <span class="layer-name truncate">${layer.name}</span>
+                    </div>
+                    <div>
+                        <button class="layer-lock text-gray-500 hover:text-gray-700">
+                            <i class="fas ${layer.locked ? 'fa-lock' : 'fa-unlock'}"></i>
+                        </button>
                     </div>
                 `;
-                reportElements.reportsList.appendChild(reportElement);
-            });
-            document.querySelectorAll('.view-document-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const fileName = this.dataset.fileName;
-                    const fileType = this.dataset.fileType;
-                    const fileData = this.dataset.fileData;
-                    reportElements.documentModalTitle.textContent = fileName;
-                    if (fileType.match('image.*') && fileData) {
-                        reportElements.documentModalImage.src = fileData;
-                        reportElements.documentModalImage.classList.remove('hidden');
-                    } else {
-                        reportElements.documentModalImage.classList.add('hidden');
-                    }
-                    reportElements.documentModal.classList.remove('hidden');
+                
+                layerItem.addEventListener('click', () => {
+                    state.activeLayer = layer.id;
+                    updateLayersList();
                 });
-            });
-            document.querySelectorAll('.edit-report-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const reportId = parseInt(this.dataset.id);
-                    openEditModal(reportId);
+                
+                // Toggle visibility
+                layerItem.querySelector('.layer-visibility').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    layer.visible = !layer.visible;
+                    updateLayersList();
+                    saveToHistory();
                 });
-            });
-            document.querySelectorAll('.delete-report-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const reportId = parseInt(this.dataset.id);
-                    if (confirm('Вы уверены, что хотите удалить этот отчёт?')) {
-                        try {
-                            const response = await fetch(`${API_URL}/reports/${reportId}`, { method: 'DELETE' });
-                            if (!response.ok) throw new Error('Ошибка при удалении отчёта');
-                            await loadReportsFromServer();
-                            showNotification('Отчёт удалён', 'success');
-                        } catch (error) {
-                            console.error('Ошибка:', error);
-                            showNotification('Не удалось удалить отчёт. Попробуйте позже.', 'error');
-                        }
-                    }
+                
+                // Toggle lock
+                layerItem.querySelector('.layer-lock').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    layer.locked = !layer.locked;
+                    updateLayersList();
+                    saveToHistory();
                 });
-            });
-            document.querySelectorAll('.status-badge').forEach(badge => {
-                badge.addEventListener('click', async function() {
-                    const reportId = parseInt(this.dataset.id);
-                    const report = reportState.reports.find(r => r.id === reportId);
-                    if (!report) return;
-                    let newStatus;
-                    switch(report.status) {
-                        case 'not_ordered': newStatus = 'ordered'; break;
-                        case 'ordered': newStatus = 'paid'; break;
-                        case 'paid': newStatus = 'not_ordered'; break;
-                        default: newStatus = 'not_ordered';
-                    }
-                    try {
-                        const response = await fetch(`${API_URL}/reports/${reportId}/status`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status: newStatus })
-                        });
-                        if (!response.ok) throw new Error('Ошибка при обновлении статуса');
-                        await loadReportsFromServer();
-                        let statusText;
-                        switch(newStatus) {
-                            case 'not_ordered': statusText = 'Не заказано'; break;
-                            case 'ordered': statusText = 'Заказано'; break;
-                            case 'paid': statusText = 'Оплачено'; break;
-                        }
-                        showNotification(`Статус изменён на "${statusText}"`, 'success');
-                    } catch (error) {
-                        console.error('Ошибка:', error);
-                        showNotification('Не удалось изменить статус. Попробуйте позже.', 'error');
-                    }
-                });
+                
+                layersList.appendChild(layerItem);
             });
         }
 
-let currentUser = null;
-
-async function checkAuth() {
-  const token = localStorage.getItem('token');
-  if (!token) return;
-
-  try {
-    const response = await fetch(`${API_URL}/auth/check`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      localStorage.removeItem('token');
-      showLoginButton();
-      return;
-    }
-
-    const data = await response.json();
-    currentUser = data.user;
-    showUserProfile(currentUser);
-  } catch (e) {
-    localStorage.removeItem('token');
-    showLoginButton();
-  }
-}
-
-async function handleTelegramAuth(event) {
-  const form = event.target;
-  const iframe = form.querySelector('iframe');
-
-  if (!iframe) return;
-
-  window.addEventListener('message', async (e) => {
-    if (e.origin !== 'https://web.telegram.org ') return;
-
-    try {
-      const response = await fetch(`${API_URL}/auth/telegram`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(e.data)
-      });
-
-      if (!response.ok) throw new Error('Ошибка авторизации');
-
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
-      currentUser = data.user;
-      showUserProfile(currentUser);
-    } catch (error) {
-      alert('Ошибка входа через Telegram');
-    }
-  });
-}
-
-function showLoginButton() {
-  document.getElementById('telegram-login-container').classList.remove('hidden');
-  document.getElementById('user-profile').classList.add('hidden');
-}
-
-function showUserProfile(user) {
-  document.getElementById('telegram-login-container').classList.add('hidden');
-  document.getElementById('user-profile').classList.remove('hidden');
-  document.getElementById('user-name').textContent = user.username;
-  document.getElementById('user-avatar').src = user.avatar || '';
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
-  const telegramForm = document.querySelector('.tgme_widget_login');
-  if (telegramForm) {
-    telegramForm.addEventListener('submit', handleTelegramAuth);
-  }
-});
-
-
-        
-        function openEditModal(reportId) {
-    const report = reportState.reports.find(r => r.id === reportId);
-    if (!report) return;
-
-    // Установка даты
-    reportElements.editDate.value = report.date; // Дата уже в формате YYYY-MM-DD из сервера
-
-    // Установка галочки "свои средства"
-    function openEditModal(reportId) {
-    const report = reportState.reports.find(r => r.id === reportId);
-    if (!report) return;
-
-    // Установка даты (обрезаем время, если оно есть)
-    reportElements.editDate.value = report.date.split('T')[0];
-
-    // Установка галочки "свои средства"
-    reportElements.editSelfPaidInput.checked = Boolean(report.self_paid || report.selfPaid);
-
-    // Установка остальных полей
-    reportElements.editId.value = report.id;
-    reportElements.editAmount.value = Math.round(report.amount); // Целое число
-    reportElements.editComment.value = report.comment || '';
-    
-    // Установка формы оплаты
-    reportElements.editPaymentMethodBtns.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.method === report.paymentMethod) {
-            btn.classList.add('active');
-            reportElements.editPaymentMethodInput.value = report.paymentMethod;
+        // Toggle snap
+        function toggleSnap() {
+            state.snapToGrid = !state.snapToGrid;
+            updateUI();
+            saveToHistory();
         }
-    });
 
-    // Отображение файла
-    if (report.fileName) {
-        reportElements.editFileName.textContent = report.fileName;
-        reportElements.editFileSize.textContent = report.fileSize;
-        reportElements.editFilePreview.classList.remove('hidden');
-        if (report.fileType.match('image.*') && report.fileData) {
-            reportElements.editFilePreviewImage.src = report.fileData;
-            reportElements.editFilePreviewImage.classList.remove('hidden');
-        } else {
-            reportElements.editFilePreviewImage.classList.add('hidden');
+        // Update UI
+        function updateUI() {
+            // Update tool buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tool === state.currentTool) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update toggle buttons
+            toggleGridBtn.classList.toggle('text-blue-600', state.showGrid);
+            toggleRulersBtn.classList.toggle('text-blue-600', state.showRulers);
+            toggleSnapBtn.classList.toggle('text-blue-600', state.snapToGrid);
+            
+            // Update status
+            snapStatus.textContent = `Snap: ${state.snapToGrid ? 'On' : 'Off'}`;
         }
-    } else {
-        reportElements.editFilePreview.classList.add('hidden');
-        reportElements.editFilePreviewImage.classList.add('hidden');
-    }
 
-    reportElements.editModal.classList.remove('hidden');
-}
-            reportElements.editModal.classList.remove('hidden');
-        }
-        document.addEventListener('DOMContentLoaded', async () => {
-            await initReports();
-        });
+        // Initialize the app
+        window.addEventListener('DOMContentLoaded', initCanvas);
     </script>
 </body>
 </html>
