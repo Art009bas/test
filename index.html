@@ -1,1257 +1,714 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Canvas Editor</title>
+    <title>Артем Басаев | Профессиональный маркетолог</title>
 <script src="https://art009bas.github.io/reestr/tailwind.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .canvas-container {
-            position: relative;
-            overflow: hidden;
-            background-color: white;
-            background-image: 
-                linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
-                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
-                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            overflow-x: hidden;
         }
         
-        .canvas-grid {
-            background-image: linear-gradient(#ddd 1px, transparent 1px),
-                              linear-gradient(90deg, #ddd 1px, transparent 1px);
-            background-size: 20px 20px;
+        .gradient-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
         }
         
-        .element {
-            position: absolute;
-            cursor: move;
-            user-select: none;
-        }
-        
-        .element.selected {
-            outline: 2px dashed #3b82f6;
-        }
-        
-        .resize-handle {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background-color: white;
-            border: 2px solid #3b82f6;
-            border-radius: 50%;
-            z-index: 10;
-        }
-        
-        .rotate-handle {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            top: -24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: white;
-            border: 2px solid #3b82f6;
-            border-radius: 50%;
-            cursor: grab;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .rotate-handle i {
-            color: #3b82f6;
-            font-size: 10px;
-        }
-        
-        .tooltip {
-            position: absolute;
-            background: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 100;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        
-        .tool-btn:hover .tooltip {
-            opacity: 1;
-        }
-        
-        .property-panel {
+        .card-hover {
             transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .floating {
+            animation: floating 6s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .typing {
+            overflow: hidden;
+            border-right: 2px solid #6366f1;
+            white-space: nowrap;
+            animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+        
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #6366f1; }
+        }
+        
+        .glow {
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        
+        .rotate-in {
+            animation: rotateIn 1s ease-out forwards;
+        }
+        
+        @keyframes rotateIn {
+            from { transform: rotate(-15deg); opacity: 0; }
+            to { transform: rotate(0deg); opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 1.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .slide-up {
+            animation: slideUp 1s ease-out forwards;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .stats-item {
+            transition: all 0.3s ease;
+        }
+        
+        .stats-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .contact-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #6366f1;
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans flex flex-col h-screen">
-    <!-- Top Toolbar -->
-    <div class="bg-white shadow-md px-4 py-2 flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-            <h1 class="text-xl font-bold text-blue-600">Canvas Editor</h1>
-            <div class="flex space-x-2">
-                <button id="new-project" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center">
-                    <i class="fas fa-file mr-2"></i> New
-                </button>
-                <button id="save-project" class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded flex items-center">
-                    <i class="fas fa-save mr-2"></i> Save
-                </button>
-                <button id="export-btn" class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded flex items-center">
-                    <i class="fas fa-download mr-2"></i> Export
-                </button>
+<body class="antialiased">
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white min-h-screen flex items-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-10"></div>
+        <div class="absolute top-0 left-0 w-full h-full">
+            <div class="absolute top-20 left-20 w-32 h-32 rounded-full bg-purple-500 opacity-20 filter blur-3xl"></div>
+            <div class="absolute bottom-20 right-20 w-40 h-40 rounded-full bg-indigo-500 opacity-20 filter blur-3xl"></div>
+            <div class="absolute top-1/3 right-1/4 w-24 h-24 rounded-full bg-pink-500 opacity-20 filter blur-3xl"></div>
+        </div>
+        
+        <div class="container mx-auto px-6 md:px-12 relative z-10">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                <div class="md:w-1/2 mb-12 md:mb-0 fade-in">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                        <span class="typing">Артем Басаев</span>
+                    </h1>
+                    <h2 class="text-2xl md:text-3xl font-semibold mb-6 slide-up">
+                        <span class="glow">Стратегический маркетолог</span>
+                    </h2>
+                    <p class="text-lg md:text-xl mb-8 max-w-lg slide-up">
+                        Превращаю идеи в прибыльные бизнес-стратегии. Специалист по digital-маркетингу, брендингу и увеличению продаж.
+                    </p>
+                    <div class="flex flex-wrap gap-4 slide-up">
+                        <a href="#contact" class="bg-white text-indigo-600 hover:bg-gray-100 px-8 py-3 rounded-full font-semibold transition duration-300 transform hover:scale-105">
+                            Связаться
+                        </a>
+                        <a href="#services" class="border-2 border-white text-white hover:bg-white hover:text-indigo-600 px-8 py-3 rounded-full font-semibold transition duration-300 transform hover:scale-105">
+                            Услуги
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="md:w-1/2 flex justify-center rotate-in">
+                    <div class="relative w-64 h-64 md:w-80 md:h-80">
+                        <div class="absolute inset-0 bg-white opacity-20 rounded-full filter blur-xl"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center overflow-hidden floating">
+                            <div class="absolute -inset-4 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full animate-spin opacity-20"></div>
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80" 
+                                 alt="Артем Басаев" 
+                                 class="relative w-full h-full object-cover rounded-full border-4 border-white">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="flex items-center space-x-4">
-            <button id="undo-btn" class="p-2 text-gray-600 hover:text-gray-900">
-                <i class="fas fa-undo"></i>
-            </button>
-            <button id="redo-btn" class="p-2 text-gray-600 hover:text-gray-900">
-                <i class="fas fa-redo"></i>
-            </button>
-            <div class="flex items-center">
-                <button id="zoom-out" class="p-2 text-gray-600 hover:text-gray-900">
-                    <i class="fas fa-search-minus"></i>
-                </button>
-                <span id="zoom-level" class="mx-2 text-sm">100%</span>
-                <button id="zoom-in" class="p-2 text-gray-600 hover:text-gray-900">
-                    <i class="fas fa-search-plus"></i>
-                </button>
-            </div>
+        
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 pulse">
+            <a href="#about" class="text-white animate-bounce">
+                <i class="fas fa-chevron-down text-2xl"></i>
+            </a>
+        </div>
+    </section>
+
+<!-- Tools Section -->
+<section class="py-20 bg-gray-50">
+    <div class="container mx-auto px-6">
+        <div class="text-center mb-16 fade-in">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Мои инструменты</h2>
+            <div class="w-20 h-1 bg-indigo-500 mx-auto"></div>
+            <p class="text-gray-600 max-w-2xl mx-auto mt-4">
+                Профессиональные инструменты, которые я использую для достижения максимальных результатов в маркетинге.
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <a href="https://analytics.google.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Google_Analytics_logo.svg/1200px-Google_Analytics_logo.svg.png" alt="Google Analytics" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">Google Analytics</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">Анализ трафика и поведения</p>
+            </a>
+            
+            <a href="https://ads.google.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Google_Ads_Logo.svg/1200px-Google_Ads_Logo.svg.png" alt="Google Ads" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">Google Ads</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">Контекстная реклама</p>
+            </a>
+            
+            <a href="https://business.facebook.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1200px-Facebook_Logo_%282019%29.png" alt="Facebook Ads" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">Facebook Ads</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">Таргетированная реклама</p>
+            </a>
+            
+            <a href="https://www.semrush.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/SEMrush_Logo.png/1200px-SEMrush_Logo.png" alt="SEMrush" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">SEMrush</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">SEO и конкурентный анализ</p>
+            </a>
+            
+            <a href="https://www.hubspot.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/HubSpot_Logo.svg/1200px-HubSpot_Logo.svg.png" alt="HubSpot" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">HubSpot</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">CRM и маркетинг-автоматизация</p>
+            </a>
+            
+            <a href="https://mailchimp.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Mailchimp_icon.svg/1200px-Mailchimp_icon.svg.png" alt="Mailchimp" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">Mailchimp</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">Email-маркетинг</p>
+            </a>
+            
+            <a href="https://www.tableau.com" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Tableau_Logo.png/1200px-Tableau_Logo.png" alt="Tableau" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">Tableau</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">Визуализация данных</p>
+            </a>
+            
+            <a href="https://www.adobe.com/products/photoshop.html" target="_blank" class="bg-white p-6 rounded-xl shadow-md flex flex-col items-center card-hover">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Adobe_Photoshop_CC_icon.svg/1200px-Adobe_Photoshop_CC_icon.svg.png" alt="Photoshop" class="h-12 mb-4">
+                <h3 class="text-lg font-semibold text-center">Photoshop</h3>
+                <p class="text-gray-500 text-sm text-center mt-2">Графический дизайн</p>
+            </a>
+        </div>
+        
+        <div class="text-center mt-12">
+            <a href="#contact" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-semibold transition duration-300 transform hover:scale-105">
+                Хотите узнать больше о моих инструментах?
+            </a>
         </div>
     </div>
-
-    <!-- Main Content -->
-    <div class="flex flex-1 overflow-hidden">
-        <!-- Left Sidebar - Tools -->
-        <div class="w-16 bg-white shadow-md flex flex-col items-center py-4 space-y-4">
-            <div class="relative">
-                <button class="tool-btn active" data-tool="select" title="Select (V)">
-                    <i class="fas fa-mouse-pointer text-blue-600"></i>
-                    <div class="tooltip">Select (V)</div>
-                </button>
+</section>
+    
+    <!-- About Section -->
+    <section id="about" class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Обо мне</h2>
+                <div class="w-20 h-1 bg-indigo-500 mx-auto"></div>
             </div>
             
-            <div class="relative">
-                <button class="tool-btn" data-tool="text" title="Text (T)">
-                    <i class="fas fa-font"></i>
-                    <div class="tooltip">Text (T)</div>
-                </button>
-            </div>
-            
-            <div class="relative">
-                <button class="tool-btn" data-tool="image" title="Image (I)">
-                    <i class="fas fa-image"></i>
-                    <div class="tooltip">Image (I)</div>
-                </button>
-            </div>
-            
-            <div class="relative group">
-                <button class="tool-btn" data-tool="shape" title="Shapes (S)">
-                    <i class="fas fa-square"></i>
-                    <div class="tooltip">Shapes (S)</div>
-                </button>
-                <div class="hidden group-hover:block absolute left-full ml-2 top-0 w-48 bg-white shadow-lg rounded-md z-10">
-                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="rectangle">
-                        <i class="fas fa-square mr-2"></i> Rectangle
-                    </button>
-                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="circle">
-                        <i class="fas fa-circle mr-2"></i> Circle
-                    </button>
-                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="triangle">
-                        <i class="fas fa-play mr-2 rotate-90"></i> Triangle
-                    </button>
-                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="line">
-                        <i class="fas fa-minus mr-2"></i> Line
-                    </button>
+            <div class="flex flex-col md:flex-row items-center gap-12">
+                <div class="md:w-1/2 slide-up">
+                    <div class="bg-gray-50 p-8 rounded-xl shadow-lg card-hover">
+                        <h3 class="text-2xl font-semibold mb-4 text-indigo-600">Моя философия</h3>
+                        <p class="text-gray-600 mb-6">
+                            Я верю, что успешный маркетинг — это не просто реклама, а создание ценности для клиента. 
+                            Моя цель — помочь бизнесу найти свой уникальный голос и донести его до целевой аудитории.
+                        </p>
+                        <p class="text-gray-600">
+                            С более чем 7-летним опытом в digital-маркетинге, я разрабатываю стратегии, которые не просто привлекают внимание, 
+                            а создают долгосрочные отношения с клиентами.
+                        </p>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="border-t border-gray-200 w-8 mx-auto my-2"></div>
-            
-            <div class="relative">
-                <button id="toggle-grid" class="tool-btn" title="Toggle Grid (G)">
-                    <i class="fas fa-th"></i>
-                    <div class="tooltip">Toggle Grid (G)</div>
-                </button>
-            </div>
-        </div>
-
-        <!-- Canvas Area -->
-        <div class="flex-1 relative overflow-auto">
-            <div id="canvas-container" class="canvas-container mx-auto bg-white shadow-lg relative">
-                <div id="canvas" class="relative" style="width: 800px; height: 600px;">
-                    <!-- Elements will be added here -->
+                
+                <div class="md:w-1/2 slide-up">
+                    <div class="bg-gray-50 p-8 rounded-xl shadow-lg card-hover">
+                        <h3 class="text-2xl font-semibold mb-4 text-indigo-600">Мой подход</h3>
+                        <ul class="space-y-4">
+                            <li class="flex items-start">
+                                <div class="bg-indigo-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-lightbulb text-indigo-600"></i>
+                                </div>
+                                <span class="text-gray-600">Инновационные решения, основанные на данных</span>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-indigo-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-chart-line text-indigo-600"></i>
+                                </div>
+                                <span class="text-gray-600">Измеряемые результаты и прозрачная отчетность</span>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-indigo-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-users text-indigo-600"></i>
+                                </div>
+                                <span class="text-gray-600">Ориентация на потребности клиента</span>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-indigo-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-rocket text-indigo-600"></i>
+                                </div>
+                                <span class="text-gray-600">Быстрая реализация и адаптация</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Right Sidebar - Properties -->
-        <div id="property-panel" class="w-64 bg-white shadow-md overflow-y-auto p-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">Properties</h3>
-                <button id="close-properties" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="py-16 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-md text-center stats-item">
+                    <div class="text-4xl font-bold text-indigo-600 mb-2">7+</div>
+                    <div class="text-gray-600">Лет опыта</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md text-center stats-item">
+                    <div class="text-4xl font-bold text-indigo-600 mb-2">120+</div>
+                    <div class="text-gray-600">Успешных проектов</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md text-center stats-item">
+                    <div class="text-4xl font-bold text-indigo-600 mb-2">300%</div>
+                    <div class="text-gray-600">Средний рост продаж</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md text-center stats-item">
+                    <div class="text-4xl font-bold text-indigo-600 mb-2">95%</div>
+                    <div class="text-gray-600">Довольных клиентов</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Services Section -->
+    <section id="services" class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Мои услуги</h2>
+                <div class="w-20 h-1 bg-indigo-500 mx-auto"></div>
             </div>
             
-            <div id="element-properties">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <input type="number" id="pos-x" class="w-full px-2 py-1 border rounded" placeholder="X">
-                        </div>
-                        <div>
-                            <input type="number" id="pos-y" class="w-full px-2 py-1 border rounded" placeholder="Y">
-                        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg transform transition duration-500 hover:scale-105 card-hover">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-bullseye text-indigo-600 text-2xl"></i>
                     </div>
+                    <h3 class="text-xl font-semibold mb-4">Стратегический маркетинг</h3>
+                    <p class="text-gray-600">
+                        Разработка комплексных маркетинговых стратегий, анализ рынка, позиционирование бренда и создание конкурентных преимуществ.
+                    </p>
                 </div>
                 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <input type="number" id="width" class="w-full px-2 py-1 border rounded" placeholder="Width">
-                        </div>
-                        <div>
-                            <input type="number" id="height" class="w-full px-2 py-1 border rounded" placeholder="Height">
-                        </div>
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg transform transition duration-500 hover:scale-105 card-hover">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-ad text-indigo-600 text-2xl"></i>
                     </div>
+                    <h3 class="text-xl font-semibold mb-4">Digital-маркетинг</h3>
+                    <p class="text-gray-600">
+                        Полный цикл digital-продвижения: контекстная реклама, таргетированная реклама, SEO, SMM, email-маркетинг и автоматизация.
+                    </p>
                 </div>
                 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Rotation</label>
-                    <input type="range" id="rotation" min="0" max="360" class="w-full" value="0">
-                    <div class="flex justify-between text-xs text-gray-500">
-                        <span>0°</span>
-                        <span id="rotation-value">0°</span>
-                        <span>360°</span>
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg transform transition duration-500 hover:scale-105 card-hover">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-chart-pie text-indigo-600 text-2xl"></i>
                     </div>
+                    <h3 class="text-xl font-semibold mb-4">Аналитика и оптимизация</h3>
+                    <p class="text-gray-600">
+                        Глубокий анализ эффективности маркетинговых каналов, A/B тестирование, оптимизация рекламных кампаний и повышение ROI.
+                    </p>
                 </div>
                 
-                <div id="text-properties" class="hidden">
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Text</label>
-                        <textarea id="text-content" class="w-full px-2 py-1 border rounded" rows="3"></textarea>
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg transform transition duration-500 hover:scale-105 card-hover">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-paint-brush text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-4">Брендинг</h3>
+                    <p class="text-gray-600">
+                        Создание и развитие брендов: нейминг, айдентика, стратегия коммуникации, тональность и визуальный стиль.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg transform transition duration-500 hover:scale-105 card-hover">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-shopping-cart text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-4">Увеличение продаж</h3>
+                    <p class="text-gray-600">
+                        Оптимизация воронки продаж, повышение конверсии, скрипты продаж, CRM-интеграция и автоматизация процессов.
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg transform transition duration-500 hover:scale-105 card-hover">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-video text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-4">Контент-маркетинг</h3>
+                    <p class="text-gray-600">
+                        Создание стратегии контента, производство текстового, графического и видео контента, ведение блогов и соцсетей.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Process Section -->
+    <section class="py-20 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Мой подход к работе</h2>
+                <div class="w-20 h-1 bg-indigo-500 mx-auto"></div>
+            </div>
+            
+            <div class="relative">
+                <div class="hidden md:block absolute top-0 left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-indigo-400 to-purple-500"></div>
+                
+                <div class="space-y-12 md:space-y-0">
+                    <div class="flex flex-col md:flex-row items-center md:items-start">
+                        <div class="md:w-1/2 md:pr-16 mb-8 md:mb-0 text-right slide-up">
+                            <div class="bg-white p-6 rounded-xl shadow-lg inline-block max-w-md">
+                                <h3 class="text-xl font-semibold mb-2 text-indigo-600">1. Анализ и исследование</h3>
+                                <p class="text-gray-600">
+                                    Глубокий анализ бизнеса, конкурентов и целевой аудитории. Определение ключевых метрик и точек роста.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 flex justify-center md:justify-start">
+                            <div class="w-16 h-16 rounded-full bg-indigo-500 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
+                                1
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
-                        <input type="number" id="font-size" class="w-full px-2 py-1 border rounded" value="16">
+                    <div class="flex flex-col md:flex-row items-center md:items-start">
+                        <div class="md:w-1/2 order-2 md:order-1 flex justify-center md:justify-end">
+                            <div class="w-16 h-16 rounded-full bg-purple-500 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
+                                2
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 md:pl-16 mb-8 md:mb-0 order-1 md:order-2 text-left slide-up">
+                            <div class="bg-white p-6 rounded-xl shadow-lg inline-block max-w-md">
+                                <h3 class="text-xl font-semibold mb-2 text-indigo-600">2. Разработка стратегии</h3>
+                                <p class="text-gray-600">
+                                    Создание индивидуальной маркетинговой стратегии с четкими KPI, каналами продвижения и планом реализации.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                        <input type="color" id="text-color" class="w-full h-8" value="#000000">
+                    <div class="flex flex-col md:flex-row items-center md:items-start">
+                        <div class="md:w-1/2 md:pr-16 mb-8 md:mb-0 text-right slide-up">
+                            <div class="bg-white p-6 rounded-xl shadow-lg inline-block max-w-md">
+                                <h3 class="text-xl font-semibold mb-2 text-indigo-600">3. Реализация</h3>
+                                <p class="text-gray-600">
+                                    Внедрение стратегии, запуск рекламных кампаний, создание контента и настройка всех маркетинговых инструментов.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 flex justify-center md:justify-start">
+                            <div class="w-16 h-16 rounded-full bg-indigo-500 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
+                                3
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div id="shape-properties" class="hidden">
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Fill Color</label>
-                        <input type="color" id="fill-color" class="w-full h-8" value="#3b82f6">
+                    
+                    <div class="flex flex-col md:flex-row items-center md:items-start">
+                        <div class="md:w-1/2 order-2 md:order-1 flex justify-center md:justify-end">
+                            <div class="w-16 h-16 rounded-full bg-purple-500 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
+                                4
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 md:pl-16 mb-8 md:mb-0 order-1 md:order-2 text-left slide-up">
+                            <div class="bg-white p-6 rounded-xl shadow-lg inline-block max-w-md">
+                                <h3 class="text-xl font-semibold mb-2 text-indigo-600">4. Анализ и оптимизация</h3>
+                                <p class="text-gray-600">
+                                    Постоянный мониторинг результатов, тестирование гипотез и оптимизация кампаний для максимальной эффективности.
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="mt-6 pt-4 border-t border-gray-200">
-                    <button id="delete-element" class="w-full px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded flex items-center justify-center">
-                        <i class="fas fa-trash mr-2"></i> Delete
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Bottom Status Bar -->
-    <div class="bg-gray-800 text-white px-4 py-2 flex justify-between items-center text-sm">
-        <div class="flex space-x-4">
-            <span id="cursor-position">X: 0, Y: 0</span>
-            <span id="selected-element">No element selected</span>
+    </section>
+    
+    <!-- Testimonials Section -->
+    <section class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Отзывы клиентов</h2>
+                <div class="w-20 h-1 bg-indigo-500 mx-auto"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg card-hover">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 rounded-full overflow-hidden mr-4">
+                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5cd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=688&q=80" 
+                                 alt="Клиент" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Анна Ковалева</h4>
+                            <p class="text-gray-500 text-sm">CEO, TechStart</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 italic">
+                        "Артем полностью изменил наше представление о маркетинге. За 6 месяцев работы с ним наши продажи выросли на 240%. Его стратегический подход и внимание к деталям просто поражают!"
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg card-hover">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 rounded-full overflow-hidden mr-4">
+                            <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80" 
+                                 alt="Клиент" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Дмитрий Смирнов</h4>
+                            <p class="text-gray-500 text-sm">Основатель, GreenFood</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 italic">
+                        "Работа с Артемом — это инвестиция, которая окупается многократно. Он не просто делает маркетинг, он строит систему, которая работает на бизнес 24/7. Рекомендую всем предпринимателям!"
+                    </p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-xl shadow-lg card-hover">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 rounded-full overflow-hidden mr-4">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=688&q=80" 
+                                 alt="Клиент" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Елена Петрова</h4>
+                            <p class="text-gray-500 text-sm">Директор, BeautyLab</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 italic">
+                        "Артем — профессионал высочайшего уровня. Он не только разработал для нас потрясающую маркетинговую стратегию, но и обучил нашу команду, что позволило нам самостоятельно масштабировать результаты."
+                    </p>
+                </div>
+            </div>
         </div>
-        <div>
-            <span id="zoom-status">Zoom: 100%</span>
+    </section>
+    
+    <!-- Contact Section -->
+    <section id="contact" class="py-20 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Свяжитесь со мной</h2>
+                <div class="w-20 h-1 bg-indigo-500 mx-auto"></div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-12">
+                <div class="md:w-1/2 slide-up">
+                    <div class="bg-white p-8 rounded-xl shadow-lg">
+                        <h3 class="text-2xl font-semibold mb-6 text-indigo-600">Давайте работать вместе</h3>
+                        <p class="text-gray-600 mb-8">
+                            Готов обсудить ваш проект и предложить оптимальное решение. Оставьте свои контакты, и я свяжусь с вами в ближайшее время.
+                        </p>
+                        
+                        <div class="space-y-6">
+                            <div class="flex items-center">
+                                <div class="bg-indigo-100 p-3 rounded-full mr-4">
+                                    <i class="fas fa-envelope text-indigo-600"></i>
+                                </div>
+                                <a href="mailto:artem@basaev.marketing" class="text-gray-600 hover:text-indigo-600">artem@basaev.marketing</a>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <div class="bg-indigo-100 p-3 rounded-full mr-4">
+                                    <i class="fas fa-phone-alt text-indigo-600"></i>
+                                </div>
+                                <a href="tel:+79161234567" class="text-gray-600 hover:text-indigo-600">+7 (916) 123-45-67</a>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <div class="bg-indigo-100 p-3 rounded-full mr-4">
+                                    <i class="fas fa-map-marker-alt text-indigo-600"></i>
+                                </div>
+                                <span class="text-gray-600">Москва, Россия</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8">
+                            <h4 class="font-semibold mb-4">Социальные сети:</h4>
+                            <div class="flex space-x-4">
+                                <a href="#" class="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition">
+                                    <i class="fab fa-telegram"></i>
+                                </a>
+                                <a href="#" class="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition">
+                                    <i class="fab fa-linkedin-in"></i>
+                                </a>
+                                <a href="#" class="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                                <a href="#" class="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="md:w-1/2 slide-up">
+                    <div class="bg-white p-8 rounded-xl shadow-lg">
+                        <form id="contactForm" class="space-y-6">
+                            <div>
+                                <label for="name" class="block text-gray-600 mb-2">Ваше имя</label>
+                                <input type="text" id="name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent contact-input" placeholder="Иван Иванов">
+                            </div>
+                            
+                            <div>
+                                <label for="email" class="block text-gray-600 mb-2">Email</label>
+                                <input type="email" id="email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent contact-input" placeholder="ivan@example.com">
+                            </div>
+                            
+                            <div>
+                                <label for="phone" class="block text-gray-600 mb-2">Телефон</label>
+                                <input type="tel" id="phone" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent contact-input" placeholder="+7 (999) 123-45-67">
+                            </div>
+                            
+                            <div>
+                                <label for="message" class="block text-gray-600 mb-2">Сообщение</label>
+                                <textarea id="message" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent contact-input" placeholder="Расскажите о вашем проекте..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-300 transform hover:scale-105">
+                                Отправить сообщение
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <!-- Hidden file input for image upload -->
-    <input type="file" id="image-upload" accept="image/*" class="hidden">
-
+    </section>
+    
+    <!-- Footer -->
+    <footer class="py-12 bg-gray-900 text-white">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-6 md:mb-0">
+                    <h2 class="text-2xl font-bold">Артем Басаев</h2>
+                    <p class="text-gray-400 mt-2">Профессиональный маркетолог</p>
+                </div>
+                
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white transition">
+                        <i class="fab fa-telegram text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition">
+                        <i class="fab fa-linkedin-in text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition">
+                        <i class="fab fa-instagram text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition">
+                        <i class="fab fa-facebook-f text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400 mb-4 md:mb-0">© 2023 Артем Басаев. Все права защищены.</p>
+                
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white transition">Политика конфиденциальности</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition">Условия использования</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
     <script>
-        // State management
-        const state = {
-            currentTool: 'select',
-            selectedElement: null,
-            elements: [],
-            zoom: 1,
-            canvasWidth: 800,
-            canvasHeight: 600,
-            history: [],
-            historyIndex: -1,
-            isDragging: false,
-            isResizing: false,
-            isRotating: false,
-            dragStartX: 0,
-            dragStartY: 0,
-            initialElementX: 0,
-            initialElementY: 0,
-            initialElementWidth: 0,
-            initialElementHeight: 0,
-            initialRotation: 0,
-            resizeHandle: null,
-            showGrid: false,
-            nextId: 1
-        };
-
-        // DOM elements
-        const canvas = document.getElementById('canvas');
-        const canvasContainer = document.getElementById('canvas-container');
-        const propertyPanel = document.getElementById('property-panel');
-        const cursorPosition = document.getElementById('cursor-position');
-        const selectedElementText = document.getElementById('selected-element');
-        const zoomLevel = document.getElementById('zoom-level');
-        const zoomStatus = document.getElementById('zoom-status');
-        const imageUpload = document.getElementById('image-upload');
-        const toggleGridBtn = document.getElementById('toggle-grid');
-
-        // Initialize the canvas
-        function initCanvas() {
-            updateCanvasSize();
-            setupEventListeners();
-            updateUI();
-        }
-
-        // Set up event listeners
-        function setupEventListeners() {
-            // Tool buttons
-            document.querySelectorAll('.tool-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    state.currentTool = this.dataset.tool;
-                    
-                    if (state.currentTool === 'image') {
-                        imageUpload.click();
-                    }
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
                 });
             });
-
-            // Shape options
-            document.querySelectorAll('.shape-option').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    addShape(this.dataset.shape);
-                });
-            });
-
-            // Canvas events
-            canvas.addEventListener('mousedown', handleCanvasMouseDown);
-            canvas.addEventListener('mousemove', handleCanvasMouseMove);
-            canvas.addEventListener('mouseup', handleCanvasMouseUp);
-            canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
-            
-            // Zoom buttons
-            document.getElementById('zoom-in').addEventListener('click', zoomIn);
-            document.getElementById('zoom-out').addEventListener('click', zoomOut);
-            
-            // Property panel inputs
-            document.getElementById('pos-x').addEventListener('change', updateElementPosition);
-            document.getElementById('pos-y').addEventListener('change', updateElementPosition);
-            document.getElementById('width').addEventListener('change', updateElementSize);
-            document.getElementById('height').addEventListener('change', updateElementSize);
-            document.getElementById('rotation').addEventListener('input', updateElementRotation);
-            
-            // Text properties
-            document.getElementById('text-content').addEventListener('input', updateTextContent);
-            document.getElementById('font-size').addEventListener('change', updateTextFont);
-            document.getElementById('text-color').addEventListener('input', updateTextColor);
-            
-            // Shape properties
-            document.getElementById('fill-color').addEventListener('input', updateShapeFill);
-            
-            // Delete button
-            document.getElementById('delete-element').addEventListener('click', deleteSelectedElement);
-            
-            // Toggle grid
-            toggleGridBtn.addEventListener('click', toggleGrid);
-            
-            // Image upload
-            imageUpload.addEventListener('change', handleImageUpload);
-            
-            // New project
-            document.getElementById('new-project').addEventListener('click', createNewProject);
-            
-            // Save project
-            document.getElementById('save-project').addEventListener('click', saveProject);
-            
-            // Export project
-            document.getElementById('export-btn').addEventListener('click', exportAsImage);
-            
-            // Undo/redo
-            document.getElementById('undo-btn').addEventListener('click', undo);
-            document.getElementById('redo-btn').addEventListener('click', redo);
-        }
-
-        // Handle canvas mouse down
-        function handleCanvasMouseDown(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / state.zoom;
-            const y = (e.clientY - rect.top) / state.zoom;
-            
-            // Check if clicking on a resize handle
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const handles = element.querySelectorAll('.resize-handle');
-                
-                handles.forEach(handle => {
-                    const handleRect = handle.getBoundingClientRect();
-                    if (e.clientX >= handleRect.left && e.clientX <= handleRect.right && 
-                        e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
-                        state.isResizing = true;
-                        state.resizeHandle = handle.dataset.handle;
-                        state.initialElementWidth = parseInt(element.style.width);
-                        state.initialElementHeight = parseInt(element.style.height);
-                        state.dragStartX = x;
-                        state.dragStartY = y;
-                        return;
-                    }
-                });
-                
-                // Check rotate handle
-                const rotateHandle = element.querySelector('.rotate-handle');
-                if (rotateHandle) {
-                    const handleRect = rotateHandle.getBoundingClientRect();
-                    if (e.clientX >= handleRect.left && e.clientX <= handleRect.right && 
-                        e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
-                        state.isRotating = true;
-                        state.initialRotation = parseFloat(element.dataset.rotation || 0);
-                        const elementRect = element.getBoundingClientRect();
-                        const centerX = elementRect.left + elementRect.width / 2;
-                        const centerY = elementRect.top + elementRect.height / 2;
-                        state.dragStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
-                        return;
-                    }
-                }
-            }
-            
-            if (!state.isResizing && !state.isRotating) {
-                const clickedElement = findElementAtPosition(x, y);
-                
-                if (clickedElement) {
-                    selectElement(clickedElement.id);
-                    
-                    state.isDragging = true;
-                    state.dragStartX = x;
-                    state.dragStartY = y;
-                    state.initialElementX = parseInt(clickedElement.style.left);
-                    state.initialElementY = parseInt(clickedElement.style.top);
-                } else {
-                    deselectElement();
-                    
-                    if (state.currentTool === 'text') {
-                        addTextElement(x, y);
-                    } else if (state.currentTool === 'shape') {
-                        addShape('rectangle', x, y);
-                    }
-                }
-            }
-            
+        });
+        
+        // Form submission
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
-        }
-
-        // Handle canvas mouse move
-        function handleCanvasMouseMove(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / state.zoom;
-            const y = (e.clientY - rect.top) / state.zoom;
             
-            cursorPosition.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+            // Get form values
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const message = document.getElementById('message').value;
             
-            if (state.isDragging && state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const dx = x - state.dragStartX;
-                const dy = y - state.dragStartY;
-                
-                element.style.left = `${state.initialElementX + dx}px`;
-                element.style.top = `${state.initialElementY + dy}px`;
-                
-                updatePropertyPanel();
-            }
+            // Here you would typically send the data to a server
+            console.log({name, email, phone, message});
             
-            if (state.isResizing && state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const dx = x - state.dragStartX;
-                const dy = y - state.dragStartY;
+            // Show success message
+            alert('Спасибо! Ваше сообщение отправлено. Я свяжусь с вами в ближайшее время.');
+            
+            // Reset form
+            this.reset();
+        });
+        
+        // Animation on scroll
+        const animateOnScroll = () => {
+            const elements = document.querySelectorAll('.slide-up, .fade-in, .rotate-in');
+            
+            elements.forEach(element => {
+                const elementPosition = element.getBoundingClientRect().top;
+                const screenPosition = window.innerHeight / 1.3;
                 
-                let newWidth = state.initialElementWidth;
-                let newHeight = state.initialElementHeight;
-                
-                switch (state.resizeHandle) {
-                    case 'top-left':
-                        newWidth = state.initialElementWidth - dx;
-                        newHeight = state.initialElementHeight - dy;
-                        element.style.left = `${parseInt(element.style.left) + dx}px`;
-                        element.style.top = `${parseInt(element.style.top) + dy}px`;
-                        break;
-                    case 'top-right':
-                        newWidth = state.initialElementWidth + dx;
-                        newHeight = state.initialElementHeight - dy;
-                        element.style.top = `${parseInt(element.style.top) + dy}px`;
-                        break;
-                    case 'bottom-left':
-                        newWidth = state.initialElementWidth - dx;
-                        newHeight = state.initialElementHeight + dy;
-                        element.style.left = `${parseInt(element.style.left) + dx}px`;
-                        break;
-                    case 'bottom-right':
-                        newWidth = state.initialElementWidth + dx;
-                        newHeight = state.initialElementHeight + dy;
-                        break;
+                if (elementPosition < screenPosition) {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0) rotate(0)';
                 }
-                
-                if (newWidth > 10) element.style.width = `${newWidth}px`;
-                if (newHeight > 10) element.style.height = `${newHeight}px`;
-                
-                updatePropertyPanel();
-            }
-            
-            if (state.isRotating && state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const elementRect = element.getBoundingClientRect();
-                const centerX = elementRect.left + elementRect.width / 2;
-                const centerY = elementRect.top + elementRect.height / 2;
-                
-                const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
-                const rotation = state.initialRotation + (currentAngle - state.dragStartAngle);
-                
-                element.style.transform = `rotate(${rotation}deg)`;
-                element.dataset.rotation = rotation;
-                
-                document.getElementById('rotation').value = rotation;
-                document.getElementById('rotation-value').textContent = `${Math.round(rotation)}°`;
-            }
-        }
-
-        // Handle canvas mouse up
-        function handleCanvasMouseUp() {
-            if (state.isDragging || state.isResizing || state.isRotating) {
-                saveToHistory();
-            }
-            
-            state.isDragging = false;
-            state.isResizing = false;
-            state.isRotating = false;
-            state.resizeHandle = null;
-        }
-
-        // Handle canvas mouse leave
-        function handleCanvasMouseLeave() {
-            handleCanvasMouseUp();
-        }
-
-        // Find element at position
-        function findElementAtPosition(x, y) {
-            for (let i = state.elements.length - 1; i >= 0; i--) {
-                const element = document.getElementById(state.elements[i].id);
-                if (!element) continue;
-                
-                const elX = parseInt(element.style.left);
-                const elY = parseInt(element.style.top);
-                const elWidth = parseInt(element.style.width);
-                const elHeight = parseInt(element.style.height);
-                
-                if (x >= elX && x <= elX + elWidth && y >= elY && y <= elY + elHeight) {
-                    return element;
-                }
-            }
-            return null;
-        }
-
-        // Select element
-        function selectElement(id) {
-            if (state.selectedElement) {
-                const prevElement = document.getElementById(state.selectedElement);
-                if (prevElement) {
-                    prevElement.classList.remove('selected');
-                    const handles = prevElement.querySelectorAll('.resize-handle, .rotate-handle');
-                    handles.forEach(handle => handle.remove());
-                }
-            }
-            
-            state.selectedElement = id;
-            const element = document.getElementById(id);
-            if (element) {
-                element.classList.add('selected');
-                addResizeHandles(element);
-                showPropertyPanel(element);
-                selectedElementText.textContent = `Selected: ${element.dataset.type || 'element'}`;
-            }
-        }
-
-        // Deselect element
-        function deselectElement() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                if (element) {
-                    element.classList.remove('selected');
-                    const handles = element.querySelectorAll('.resize-handle, .rotate-handle');
-                    handles.forEach(handle => handle.remove());
-                }
-                
-                state.selectedElement = null;
-                selectedElementText.textContent = 'No element selected';
-                propertyPanel.classList.add('hidden');
-            }
-        }
-
-        // Add resize handles to element
-        function addResizeHandles(element) {
-            const positions = [
-                { handle: 'top-left', left: 0, top: 0 },
-                { handle: 'top-right', left: '100%', top: 0 },
-                { handle: 'bottom-left', left: 0, top: '100%' },
-                { handle: 'bottom-right', left: '100%', top: '100%' }
-            ];
-            
-            positions.forEach(pos => {
-                const handle = document.createElement('div');
-                handle.className = 'resize-handle';
-                handle.dataset.handle = pos.handle;
-                handle.style.left = pos.left === '100%' ? `calc(${pos.left} - 6px)` : `${pos.left}px`;
-                handle.style.top = pos.top === '100%' ? `calc(${pos.top} - 6px)` : `${pos.top}px`;
-                handle.style.transform = 'translate(-50%, -50%)';
-                element.appendChild(handle);
             });
-            
-            const rotateHandle = document.createElement('div');
-            rotateHandle.className = 'rotate-handle';
-            const rotateIcon = document.createElement('i');
-            rotateIcon.className = 'fas fa-sync-alt';
-            rotateHandle.appendChild(rotateIcon);
-            element.appendChild(rotateHandle);
-        }
-
-        // Show property panel
-        function showPropertyPanel(element) {
-            propertyPanel.classList.remove('hidden');
-            
-            document.getElementById('pos-x').value = parseInt(element.style.left);
-            document.getElementById('pos-y').value = parseInt(element.style.top);
-            document.getElementById('width').value = parseInt(element.style.width);
-            document.getElementById('height').value = parseInt(element.style.height);
-            
-            const rotation = parseFloat(element.dataset.rotation || 0);
-            document.getElementById('rotation').value = rotation;
-            document.getElementById('rotation-value').textContent = `${rotation}°`;
-            
-            document.getElementById('text-properties').classList.add('hidden');
-            document.getElementById('shape-properties').classList.add('hidden');
-            
-            const type = element.dataset.type;
-            if (type === 'text') {
-                document.getElementById('text-properties').classList.remove('hidden');
-                document.getElementById('text-content').value = element.textContent;
-                document.getElementById('font-size').value = parseInt(element.style.fontSize);
-                document.getElementById('text-color').value = element.style.color || '#000000';
-            } else if (type === 'shape') {
-                document.getElementById('shape-properties').classList.remove('hidden');
-                document.getElementById('fill-color').value = element.style.backgroundColor || '#3b82f6';
-            }
-        }
-
-        // Update property panel
-        function updatePropertyPanel() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                showPropertyPanel(element);
-            }
-        }
-
-        // Update element position from property panel
-        function updateElementPosition() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const x = parseInt(document.getElementById('pos-x').value);
-                const y = parseInt(document.getElementById('pos-y').value);
-                
-                element.style.left = `${x}px`;
-                element.style.top = `${y}px`;
-                
-                saveToHistory();
-            }
-        }
-
-        // Update element size from property panel
-        function updateElementSize() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const width = parseInt(document.getElementById('width').value);
-                const height = parseInt(document.getElementById('height').value);
-                
-                element.style.width = `${width}px`;
-                element.style.height = `${height}px`;
-                
-                saveToHistory();
-            }
-        }
-
-        // Update element rotation from property panel
-        function updateElementRotation() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                const rotation = document.getElementById('rotation').value;
-                
-                element.style.transform = `rotate(${rotation}deg)`;
-                element.dataset.rotation = rotation;
-                document.getElementById('rotation-value').textContent = `${rotation}°`;
-                
-                saveToHistory();
-            }
-        }
-
-        // Update text content from property panel
-        function updateTextContent() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                if (element.dataset.type === 'text') {
-                    element.textContent = document.getElementById('text-content').value;
-                    saveToHistory();
-                }
-            }
-        }
-
-        // Update text font from property panel
-        function updateTextFont() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                if (element.dataset.type === 'text') {
-                    const fontSize = document.getElementById('font-size').value + 'px';
-                    element.style.fontSize = fontSize;
-                    saveToHistory();
-                }
-            }
-        }
-
-        // Update text color from property panel
-        function updateTextColor() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                if (element.dataset.type === 'text') {
-                    element.style.color = document.getElementById('text-color').value;
-                    saveToHistory();
-                }
-            }
-        }
-
-        // Update shape fill from property panel
-        function updateShapeFill() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                if (element.dataset.type === 'shape') {
-                    element.style.backgroundColor = document.getElementById('fill-color').value;
-                    saveToHistory();
-                }
-            }
-        }
-
-        // Delete selected element
-        function deleteSelectedElement() {
-            if (state.selectedElement) {
-                const element = document.getElementById(state.selectedElement);
-                if (element) {
-                    element.remove();
-                    state.elements = state.elements.filter(el => el.id !== state.selectedElement);
-                    deselectElement();
-                    saveToHistory();
-                }
-            }
-        }
-
-        // Add text element
-        function addTextElement(x, y) {
-            const id = `element-${state.nextId++}`;
-            const element = document.createElement('div');
-            
-            element.id = id;
-            element.className = 'element';
-            element.dataset.type = 'text';
-            element.style.position = 'absolute';
-            element.style.left = `${x}px`;
-            element.style.top = `${y}px`;
-            element.style.width = '200px';
-            element.style.minHeight = '24px';
-            element.style.padding = '4px';
-            element.style.fontFamily = 'Arial';
-            element.style.fontSize = '16px';
-            element.style.color = '#000000';
-            element.style.backgroundColor = 'transparent';
-            element.style.border = '1px dashed #ccc';
-            element.style.cursor = 'text';
-            element.contentEditable = 'true';
-            element.textContent = 'Double click to edit';
-            
-            canvas.appendChild(element);
-            state.elements.push({ id, type: 'text' });
-            selectElement(id);
-            element.focus();
-            saveToHistory();
-        }
-
-        // Add shape element
-        function addShape(shape, x = 100, y = 100) {
-            const id = `element-${state.nextId++}`;
-            const element = document.createElement('div');
-            
-            element.id = id;
-            element.className = 'element';
-            element.dataset.type = 'shape';
-            element.dataset.shape = shape;
-            element.style.position = 'absolute';
-            element.style.left = `${x}px`;
-            element.style.top = `${y}px`;
-            element.style.width = '100px';
-            element.style.height = '100px';
-            element.style.backgroundColor = '#3b82f6';
-            
-            switch (shape) {
-                case 'circle':
-                    element.style.borderRadius = '50%';
-                    break;
-                case 'triangle':
-                    element.style.width = '0';
-                    element.style.height = '0';
-                    element.style.borderLeft = '50px solid transparent';
-                    element.style.borderRight = '50px solid transparent';
-                    element.style.borderBottom = '100px solid #3b82f6';
-                    element.style.backgroundColor = 'transparent';
-                    break;
-                case 'line':
-                    element.style.width = '150px';
-                    element.style.height = '2px';
-                    element.style.backgroundColor = '#000000';
-                    element.style.border = 'none';
-                    break;
-            }
-            
-            canvas.appendChild(element);
-            state.elements.push({ id, type: 'shape', shape });
-            selectElement(id);
-            saveToHistory();
-        }
-
-        // Handle image upload
-        function handleImageUpload(e) {
-            const files = e.target.files;
-            if (files.length > 0) {
-                const file = files[0];
-                const reader = new FileReader();
-                
-                reader.onload = function(event) {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = (rect.width / 2 - 150) / state.zoom;
-                    const y = (rect.height / 2 - 150) / state.zoom;
-                    
-                    addImageElement(event.target.result, x, y);
-                };
-                
-                reader.readAsDataURL(file);
-            }
-            
-            e.target.value = '';
-        }
-
-        // Add image element
-        function addImageElement(src, x, y) {
-            const id = `element-${state.nextId++}`;
-            const element = document.createElement('img');
-            
-            element.id = id;
-            element.className = 'element';
-            element.dataset.type = 'image';
-            element.style.position = 'absolute';
-            element.style.left = `${x}px`;
-            element.style.top = `${y}px`;
-            element.style.maxWidth = '300px';
-            element.style.maxHeight = '300px';
-            element.style.objectFit = 'contain';
-            element.src = src;
-            
-            element.onload = function() {
-                element.style.width = `${this.naturalWidth}px`;
-                element.style.height = `${this.naturalHeight}px`;
-                saveToHistory();
-            };
-            
-            canvas.appendChild(element);
-            state.elements.push({ id, type: 'image', src });
-            selectElement(id);
-        }
-
-        // Zoom in
-        function zoomIn() {
-            if (state.zoom < 2) {
-                state.zoom += 0.1;
-                applyZoom();
-            }
-        }
-
-        // Zoom out
-        function zoomOut() {
-            if (state.zoom > 0.2) {
-                state.zoom -= 0.1;
-                applyZoom();
-            }
-        }
-
-        // Apply zoom
-        function applyZoom() {
-            state.zoom = Math.round(state.zoom * 10) / 10;
-            canvasContainer.style.transform = `scale(${state.zoom})`;
-            canvasContainer.style.transformOrigin = 'top left';
-            
-            const zoomPercent = Math.round(state.zoom * 100);
-            zoomLevel.textContent = `${zoomPercent}%`;
-            zoomStatus.textContent = `Zoom: ${zoomPercent}%`;
-            
-            saveToHistory();
-        }
-
-        // Toggle grid
-        function toggleGrid() {
-            state.showGrid = !state.showGrid;
-            if (state.showGrid) {
-                canvas.classList.add('canvas-grid');
-                toggleGridBtn.classList.add('text-blue-600');
-            } else {
-                canvas.classList.remove('canvas-grid');
-                toggleGridBtn.classList.remove('text-blue-600');
-            }
-            saveToHistory();
-        }
-
-        // Save to history
-        function saveToHistory() {
-            const snapshot = {
-                elements: JSON.parse(JSON.stringify(state.elements)),
-                zoom: state.zoom,
-                showGrid: state.showGrid
-            };
-            
-            state.history.push(snapshot);
-            state.historyIndex = state.history.length - 1;
-        }
-
-        // Undo
-        function undo() {
-            if (state.historyIndex > 0) {
-                state.historyIndex--;
-                restoreFromHistory();
-            }
-        }
-
-        // Redo
-        function redo() {
-            if (state.historyIndex < state.history.length - 1) {
-                state.historyIndex++;
-                restoreFromHistory();
-            }
-        }
-
-                    // Restore from history
-            function restoreFromHistory() {
-                const historyState = state.history[state.historyIndex];
-                
-                // Clear canvas
-                while (canvas.firstChild) {
-                    canvas.removeChild(canvas.firstChild);
-                }
-                
-                // Restore elements
-                state.elements = [];
-                historyState.elements.forEach(el => {
-                    let element;
-                    
-                    switch (el.type) {
-                        case 'text':
-                            element = addTextElement(0, 0);
-                            break;
-                        case 'shape':
-                            element = addShape(el.shape || 'rectangle', 0, 0);
-                            break;
-                        case 'image':
-                            element = addImageElement(el.src, 0, 0);
-                            break;
-                    }
-                    
-                    if (element) {
-                        const elFromHistory = document.getElementById(el.id);
-                        if (elFromHistory) {
-                            // Restore all properties
-                            elFromHistory.style.left = el.style?.left || '0px';
-                            elFromHistory.style.top = el.style?.top || '0px';
-                            elFromHistory.style.width = el.style?.width || '100px';
-                            elFromHistory.style.height = el.style?.height || '100px';
-                            elFromHistory.style.transform = el.style?.transform || '';
-                            elFromHistory.dataset.rotation = el.dataset?.rotation || '0';
-                            
-                            if (el.type === 'text') {
-                                elFromHistory.textContent = el.textContent || '';
-                                elFromHistory.style.fontSize = el.style?.fontSize || '16px';
-                                elFromHistory.style.color = el.style?.color || '#000000';
-                            } else if (el.type === 'shape') {
-                                elFromHistory.style.backgroundColor = el.style?.backgroundColor || '#3b82f6';
-                                if (el.shape === 'triangle') {
-                                    elFromHistory.style.borderBottom = el.style?.borderBottom || '100px solid #3b82f6';
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                // Restore zoom and grid
-                state.zoom = historyState.zoom;
-                state.showGrid = historyState.showGrid;
-                applyZoom();
-                
-                if (state.showGrid) {
-                    canvas.classList.add('canvas-grid');
-                    toggleGridBtn.classList.add('text-blue-600');
-                } else {
-                    canvas.classList.remove('canvas-grid');
-                    toggleGridBtn.classList.remove('text-blue-600');
-                }
-                
-                deselectElement();
-                updateUI();
-            }
-
-            // Create new project
-            function createNewProject() {
-                if (confirm('Are you sure you want to create a new project? All unsaved changes will be lost.')) {
-                    // Clear canvas
-                    while (canvas.firstChild) {
-                        canvas.removeChild(canvas.firstChild);
-                    }
-                    
-                    // Reset state
-                    state.elements = [];
-                    state.selectedElement = null;
-                    state.zoom = 1;
-                    state.showGrid = false;
-                    state.nextId = 1;
-                    state.history = [];
-                    state.historyIndex = -1;
-                    
-                    // Update UI
-                    applyZoom();
-                    canvas.classList.remove('canvas-grid');
-                    toggleGridBtn.classList.remove('text-blue-600');
-                    deselectElement();
-                    updateUI();
-                    
-                    // Save initial state
-                    saveToHistory();
-                }
-            }
-
-            // Save project
-            function saveProject() {
-                const projectData = {
-                    elements: state.elements.map(el => {
-                        const element = document.getElementById(el.id);
-                        return {
-                            id: el.id,
-                            type: el.type,
-                            shape: el.shape,
-                            src: el.src,
-                            style: {
-                                left: element?.style.left,
-                                top: element?.style.top,
-                                width: element?.style.width,
-                                height: element?.style.height,
-                                transform: element?.style.transform,
-                                fontSize: element?.style.fontSize,
-                                color: element?.style.color,
-                                backgroundColor: element?.style.backgroundColor,
-                                borderBottom: element?.style.borderBottom
-                            },
-                            textContent: element?.textContent,
-                            dataset: {
-                                rotation: element?.dataset.rotation
-                            }
-                        };
-                    }),
-                    zoom: state.zoom,
-                    showGrid: state.showGrid
-                };
-                
-                const dataStr = JSON.stringify(projectData);
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                
-                const exportName = 'canvas-project.json';
-                
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportName);
-                linkElement.click();
-            }
-
-            // Export as image
-            function exportAsImage() {
-                // Create a temporary canvas for rendering
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                
-                // Set canvas size
-                tempCanvas.width = state.canvasWidth;
-                tempCanvas.height = state.canvasHeight;
-                
-                // Fill with white background
-                tempCtx.fillStyle = 'white';
-                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-                
-                // Clone all elements to render them
-                const elements = canvas.querySelectorAll('.element');
-                
-                // Create a promise for each element to load
-                const promises = Array.from(elements).map(element => {
-                    return new Promise((resolve) => {
-                        if (element.dataset.type === 'image') {
-                            const img = new Image();
-                            img.onload = function() {
-                                const x = parseInt(element.style.left);
-                                const y = parseInt(element.style.top);
-                                const width = parseInt(element.style.width);
-                                const height = parseInt(element.style.height);
-                                
-                                tempCtx.save();
-                                if (element.dataset.rotation) {
-                                    const rotation = parseFloat(element.dataset.rotation);
-                                    const centerX = x + width / 2;
-                                    const centerY = y + height / 2;
-                                    
-                                    tempCtx.translate(centerX, centerY);
-                                    tempCtx.rotate(rotation * Math.PI / 180);
-                                    tempCtx.translate(-centerX, -centerY);
-                                }
-                                
-                                tempCtx.drawImage(img, x, y, width, height);
-                                tempCtx.restore();
-                                resolve();
-                            };
-                            img.src = element.src;
-                        } else {
-                            const x = parseInt(element.style.left);
-                            const y = parseInt(element.style.top);
-                            const width = parseInt(element.style.width);
-                            const height = parseInt(element.style.height);
-                            
-                            tempCtx.save();
-                            if (element.dataset.rotation) {
-                                const rotation = parseFloat(element.dataset.rotation);
-                                const centerX = x + width / 2;
-                                const centerY = y + height / 2;
-                                
-                                tempCtx.translate(centerX, centerY);
-                                tempCtx.rotate(rotation * Math.PI / 180);
-                                tempCtx.translate(-centerX, -centerY);
-                            }
-                            
-                            if (element.dataset.type === 'text') {
-                                tempCtx.font = `${element.style.fontSize} ${element.style.fontFamily || 'Arial'}`;
-                                tempCtx.fillStyle = element.style.color || '#000000';
-                                tempCtx.fillText(element.textContent, x, y + parseInt(element.style.fontSize));
-                            } else if (element.dataset.type === 'shape') {
-                                tempCtx.fillStyle = element.style.backgroundColor || '#3b82f6';
-                                
-                                switch (element.dataset.shape) {
-                                    case 'rectangle':
-                                        tempCtx.fillRect(x, y, width, height);
-                                        break;
-                                    case 'circle':
-                                        tempCtx.beginPath();
-                                        tempCtx.ellipse(x + width/2, y + height/2, width/2, height/2, 0, 0, Math.PI * 2);
-                                        tempCtx.fill();
-                                        break;
-                                    case 'triangle':
-                                        tempCtx.beginPath();
-                                        tempCtx.moveTo(x + width/2, y);
-                                        tempCtx.lineTo(x, y + height);
-                                        tempCtx.lineTo(x + width, y + height);
-                                        tempCtx.closePath();
-                                        tempCtx.fill();
-                                        break;
-                                    case 'line':
-                                        tempCtx.strokeStyle = element.style.backgroundColor || '#000000';
-                                        tempCtx.lineWidth = height;
-                                        tempCtx.beginPath();
-                                        tempCtx.moveTo(x, y + height/2);
-                                        tempCtx.lineTo(x + width, y + height/2);
-                                        tempCtx.stroke();
-                                        break;
-                                }
-                            }
-                            tempCtx.restore();
-                            resolve();
-                        }
-                    });
-                });
-                
-                // When all elements are rendered, export the image
-                Promise.all(promises).then(() => {
-                    const dataUrl = tempCanvas.toDataURL('image/png');
-                    
-                    const link = document.createElement('a');
-                    link.download = 'canvas-export.png';
-                    link.href = dataUrl;
-                    link.click();
-                });
-            }
-
-            // Update canvas size
-            function updateCanvasSize() {
-                const containerWidth = canvasContainer.parentElement.clientWidth;
-                const containerHeight = canvasContainer.parentElement.clientHeight;
-                
-                // Set canvas container size to fit available space
-                canvasContainer.style.width = `${containerWidth}px`;
-                canvasContainer.style.height = `${containerHeight}px`;
-                
-                // Center the canvas
-                canvas.style.marginLeft = `${(containerWidth - state.canvasWidth) / 2}px`;
-                canvas.style.marginTop = `${(containerHeight - state.canvasHeight) / 2}px`;
-            }
-
-            // Update UI
-            function updateUI() {
-                // Update undo/redo buttons
-                document.getElementById('undo-btn').disabled = state.historyIndex <= 0;
-                document.getElementById('redo-btn').disabled = state.historyIndex >= state.history.length - 1;
-                
-                // Update zoom display
-                const zoomPercent = Math.round(state.zoom * 100);
-                zoomLevel.textContent = `${zoomPercent}%`;
-                zoomStatus.textContent = `Zoom: ${zoomPercent}%`;
-                
-                // Update grid button
-                if (state.showGrid) {
-                    toggleGridBtn.classList.add('text-blue-600');
-                } else {
-                    toggleGridBtn.classList.remove('text-blue-600');
-                }
-            }
-
-            // Initialize the application
-            window.addEventListener('load', () => {
-                initCanvas();
-                saveToHistory(); // Save initial state
-            });
-
-            // Handle window resize
-            window.addEventListener('resize', updateCanvasSize);
-        </script>
-    </body>
+        };
+        
+        // Initialize animations
+        window.addEventListener('load', () => {
+            animateOnScroll();
+        });
+        
+        window.addEventListener('scroll', () => {
+            animateOnScroll();
+        });
+    </script>
+</body>
 </html>
