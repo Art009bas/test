@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Canvas Editor</title>
+    <title>Advanced Canvas Editor</title>
 <script src="https://art009bas.github.io/reestr/tailwind.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -11,6 +11,19 @@
             position: relative;
             overflow: hidden;
             background-color: white;
+            background-image: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        .canvas-grid {
+            background-image: linear-gradient(#ddd 1px, transparent 1px),
+                              linear-gradient(90deg, #ddd 1px, transparent 1px);
+            background-size: 20px 20px;
         }
         
         .element {
@@ -22,13 +35,93 @@
         .element.selected {
             outline: 2px dashed #3b82f6;
         }
+        
+        .resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            z-index: 10;
+        }
+        
+        .rotate-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: white;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .rotate-handle i {
+            color: #3b82f6;
+            font-size: 10px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .tool-btn:hover .tooltip {
+            opacity: 1;
+        }
+        
+        .property-panel {
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans flex flex-col h-screen">
     <!-- Top Toolbar -->
     <div class="bg-white shadow-md px-4 py-2 flex items-center justify-between">
         <div class="flex items-center space-x-4">
-            <h1 class="text-xl font-bold text-blue-600">Simple Canvas Editor</h1>
+            <h1 class="text-xl font-bold text-blue-600">Canvas Editor</h1>
+            <div class="flex space-x-2">
+                <button id="new-project" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center">
+                    <i class="fas fa-file mr-2"></i> New
+                </button>
+                <button id="save-project" class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded flex items-center">
+                    <i class="fas fa-save mr-2"></i> Save
+                </button>
+                <button id="export-btn" class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded flex items-center">
+                    <i class="fas fa-download mr-2"></i> Export
+                </button>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button id="undo-btn" class="p-2 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button id="redo-btn" class="p-2 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-redo"></i>
+            </button>
+            <div class="flex items-center">
+                <button id="zoom-out" class="p-2 text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <span id="zoom-level" class="mx-2 text-sm">100%</span>
+                <button id="zoom-in" class="p-2 text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -36,83 +129,427 @@
     <div class="flex flex-1 overflow-hidden">
         <!-- Left Sidebar - Tools -->
         <div class="w-16 bg-white shadow-md flex flex-col items-center py-4 space-y-4">
-            <button class="tool-btn active" data-tool="select" title="Select">
-                <i class="fas fa-mouse-pointer text-blue-600"></i>
-            </button>
-            <button class="tool-btn" data-tool="text" title="Text">
-                <i class="fas fa-font"></i>
-            </button>
-            <button class="tool-btn" data-tool="rectangle" title="Rectangle">
-                <i class="fas fa-square"></i>
-            </button>
-            <button class="tool-btn" data-tool="circle" title="Circle">
-                <i class="fas fa-circle"></i>
-            </button>
+            <div class="relative">
+                <button class="tool-btn active" data-tool="select" title="Select (V)">
+                    <i class="fas fa-mouse-pointer text-blue-600"></i>
+                    <div class="tooltip">Select (V)</div>
+                </button>
+            </div>
+            
+            <div class="relative">
+                <button class="tool-btn" data-tool="text" title="Text (T)">
+                    <i class="fas fa-font"></i>
+                    <div class="tooltip">Text (T)</div>
+                </button>
+            </div>
+            
+            <div class="relative">
+                <button class="tool-btn" data-tool="image" title="Image (I)">
+                    <i class="fas fa-image"></i>
+                    <div class="tooltip">Image (I)</div>
+                </button>
+            </div>
+            
+            <div class="relative group">
+                <button class="tool-btn" data-tool="shape" title="Shapes (S)">
+                    <i class="fas fa-square"></i>
+                    <div class="tooltip">Shapes (S)</div>
+                </button>
+                <div class="hidden group-hover:block absolute left-full ml-2 top-0 w-48 bg-white shadow-lg rounded-md z-10">
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="rectangle">
+                        <i class="fas fa-square mr-2"></i> Rectangle
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="circle">
+                        <i class="fas fa-circle mr-2"></i> Circle
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="triangle">
+                        <i class="fas fa-play mr-2 rotate-90"></i> Triangle
+                    </button>
+                    <button class="shape-option block w-full text-left px-4 py-2 hover:bg-gray-100" data-shape="line">
+                        <i class="fas fa-minus mr-2"></i> Line
+                    </button>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-200 w-8 mx-auto my-2"></div>
+            
+            <div class="relative">
+                <button id="toggle-grid" class="tool-btn" title="Toggle Grid (G)">
+                    <i class="fas fa-th"></i>
+                    <div class="tooltip">Toggle Grid (G)</div>
+                </button>
+            </div>
         </div>
 
         <!-- Canvas Area -->
         <div class="flex-1 relative overflow-auto">
             <div id="canvas-container" class="canvas-container mx-auto bg-white shadow-lg relative">
-                <div id="canvas" style="width: 800px; height: 600px;">
+                <div id="canvas" class="relative" style="width: 800px; height: 600px;">
                     <!-- Elements will be added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Properties -->
+        <div id="property-panel" class="w-64 bg-white shadow-md overflow-y-auto p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">Properties</h3>
+                <button id="close-properties" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="element-properties">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <input type="number" id="pos-x" class="w-full px-2 py-1 border rounded" placeholder="X">
+                        </div>
+                        <div>
+                            <input type="number" id="pos-y" class="w-full px-2 py-1 border rounded" placeholder="Y">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <input type="number" id="width" class="w-full px-2 py-1 border rounded" placeholder="Width">
+                        </div>
+                        <div>
+                            <input type="number" id="height" class="w-full px-2 py-1 border rounded" placeholder="Height">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rotation</label>
+                    <input type="range" id="rotation" min="0" max="360" class="w-full" value="0">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>0°</span>
+                        <span id="rotation-value">0°</span>
+                        <span>360°</span>
+                    </div>
+                </div>
+                
+                <div id="text-properties" class="hidden">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Text</label>
+                        <textarea id="text-content" class="w-full px-2 py-1 border rounded" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
+                        <input type="number" id="font-size" class="w-full px-2 py-1 border rounded" value="16">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                        <input type="color" id="text-color" class="w-full h-8" value="#000000">
+                    </div>
+                </div>
+                
+                <div id="shape-properties" class="hidden">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fill Color</label>
+                        <input type="color" id="fill-color" class="w-full h-8" value="#3b82f6">
+                    </div>
+                </div>
+                
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <button id="delete-element" class="w-full px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded flex items-center justify-center">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bottom Status Bar -->
+    <div class="bg-gray-800 text-white px-4 py-2 flex justify-between items-center text-sm">
+        <div class="flex space-x-4">
+            <span id="cursor-position">X: 0, Y: 0</span>
+            <span id="selected-element">No element selected</span>
+        </div>
+        <div>
+            <span id="zoom-status">Zoom: 100%</span>
+        </div>
+    </div>
+
+    <!-- Hidden file input for image upload -->
+    <input type="file" id="image-upload" accept="image/*" class="hidden">
+
     <script>
-        // Simple state management
+        // State management
         const state = {
             currentTool: 'select',
             selectedElement: null,
             elements: [],
+            zoom: 1,
+            canvasWidth: 800,
+            canvasHeight: 600,
+            history: [],
+            historyIndex: -1,
+            isDragging: false,
+            isResizing: false,
+            isRotating: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            initialElementX: 0,
+            initialElementY: 0,
+            initialElementWidth: 0,
+            initialElementHeight: 0,
+            initialRotation: 0,
+            resizeHandle: null,
+            showGrid: false,
             nextId: 1
         };
 
         // DOM elements
         const canvas = document.getElementById('canvas');
-        const toolButtons = document.querySelectorAll('.tool-btn');
+        const canvasContainer = document.getElementById('canvas-container');
+        const propertyPanel = document.getElementById('property-panel');
+        const cursorPosition = document.getElementById('cursor-position');
+        const selectedElementText = document.getElementById('selected-element');
+        const zoomLevel = document.getElementById('zoom-level');
+        const zoomStatus = document.getElementById('zoom-status');
+        const imageUpload = document.getElementById('image-upload');
+        const toggleGridBtn = document.getElementById('toggle-grid');
 
         // Initialize the canvas
-        function init() {
+        function initCanvas() {
+            updateCanvasSize();
             setupEventListeners();
+            updateUI();
         }
 
         // Set up event listeners
         function setupEventListeners() {
             // Tool buttons
-            toolButtons.forEach(btn => {
+            document.querySelectorAll('.tool-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    toolButtons.forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     state.currentTool = this.dataset.tool;
+                    
+                    if (state.currentTool === 'image') {
+                        imageUpload.click();
+                    }
+                });
+            });
+
+            // Shape options
+            document.querySelectorAll('.shape-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    addShape(this.dataset.shape);
                 });
             });
 
             // Canvas events
             canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+            canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
+            
+            // Zoom buttons
+            document.getElementById('zoom-in').addEventListener('click', zoomIn);
+            document.getElementById('zoom-out').addEventListener('click', zoomOut);
+            
+            // Property panel inputs
+            document.getElementById('pos-x').addEventListener('change', updateElementPosition);
+            document.getElementById('pos-y').addEventListener('change', updateElementPosition);
+            document.getElementById('width').addEventListener('change', updateElementSize);
+            document.getElementById('height').addEventListener('change', updateElementSize);
+            document.getElementById('rotation').addEventListener('input', updateElementRotation);
+            
+            // Text properties
+            document.getElementById('text-content').addEventListener('input', updateTextContent);
+            document.getElementById('font-size').addEventListener('change', updateTextFont);
+            document.getElementById('text-color').addEventListener('input', updateTextColor);
+            
+            // Shape properties
+            document.getElementById('fill-color').addEventListener('input', updateShapeFill);
+            
+            // Delete button
+            document.getElementById('delete-element').addEventListener('click', deleteSelectedElement);
+            
+            // Toggle grid
+            toggleGridBtn.addEventListener('click', toggleGrid);
+            
+            // Image upload
+            imageUpload.addEventListener('change', handleImageUpload);
+            
+            // New project
+            document.getElementById('new-project').addEventListener('click', createNewProject);
+            
+            // Save project
+            document.getElementById('save-project').addEventListener('click', saveProject);
+            
+            // Export project
+            document.getElementById('export-btn').addEventListener('click', exportAsImage);
+            
+            // Undo/redo
+            document.getElementById('undo-btn').addEventListener('click', undo);
+            document.getElementById('redo-btn').addEventListener('click', redo);
         }
 
         // Handle canvas mouse down
         function handleCanvasMouseDown(e) {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = (e.clientX - rect.left) / state.zoom;
+            const y = (e.clientY - rect.top) / state.zoom;
             
-            if (state.currentTool === 'select') {
+            // Check if clicking on a resize handle
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const handles = element.querySelectorAll('.resize-handle');
+                
+                handles.forEach(handle => {
+                    const handleRect = handle.getBoundingClientRect();
+                    if (e.clientX >= handleRect.left && e.clientX <= handleRect.right && 
+                        e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
+                        state.isResizing = true;
+                        state.resizeHandle = handle.dataset.handle;
+                        state.initialElementWidth = parseInt(element.style.width);
+                        state.initialElementHeight = parseInt(element.style.height);
+                        state.dragStartX = x;
+                        state.dragStartY = y;
+                        return;
+                    }
+                });
+                
+                // Check rotate handle
+                const rotateHandle = element.querySelector('.rotate-handle');
+                if (rotateHandle) {
+                    const handleRect = rotateHandle.getBoundingClientRect();
+                    if (e.clientX >= handleRect.left && e.clientX <= handleRect.right && 
+                        e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
+                        state.isRotating = true;
+                        state.initialRotation = parseFloat(element.dataset.rotation || 0);
+                        const elementRect = element.getBoundingClientRect();
+                        const centerX = elementRect.left + elementRect.width / 2;
+                        const centerY = elementRect.top + elementRect.height / 2;
+                        state.dragStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+                        return;
+                    }
+                }
+            }
+            
+            if (!state.isResizing && !state.isRotating) {
                 const clickedElement = findElementAtPosition(x, y);
+                
                 if (clickedElement) {
                     selectElement(clickedElement.id);
+                    
+                    state.isDragging = true;
+                    state.dragStartX = x;
+                    state.dragStartY = y;
+                    state.initialElementX = parseInt(clickedElement.style.left);
+                    state.initialElementY = parseInt(clickedElement.style.top);
                 } else {
                     deselectElement();
+                    
+                    if (state.currentTool === 'text') {
+                        addTextElement(x, y);
+                    } else if (state.currentTool === 'shape') {
+                        addShape('rectangle', x, y);
+                    }
                 }
-            } else if (state.currentTool === 'text') {
-                addTextElement(x, y);
-            } else if (state.currentTool === 'rectangle') {
-                addRectangle(x, y);
-            } else if (state.currentTool === 'circle') {
-                addCircle(x, y);
             }
+            
+            e.preventDefault();
+        }
+
+        // Handle canvas mouse move
+        function handleCanvasMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / state.zoom;
+            const y = (e.clientY - rect.top) / state.zoom;
+            
+            cursorPosition.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+            
+            if (state.isDragging && state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const dx = x - state.dragStartX;
+                const dy = y - state.dragStartY;
+                
+                element.style.left = `${state.initialElementX + dx}px`;
+                element.style.top = `${state.initialElementY + dy}px`;
+                
+                updatePropertyPanel();
+            }
+            
+            if (state.isResizing && state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const dx = x - state.dragStartX;
+                const dy = y - state.dragStartY;
+                
+                let newWidth = state.initialElementWidth;
+                let newHeight = state.initialElementHeight;
+                
+                switch (state.resizeHandle) {
+                    case 'top-left':
+                        newWidth = state.initialElementWidth - dx;
+                        newHeight = state.initialElementHeight - dy;
+                        element.style.left = `${parseInt(element.style.left) + dx}px`;
+                        element.style.top = `${parseInt(element.style.top) + dy}px`;
+                        break;
+                    case 'top-right':
+                        newWidth = state.initialElementWidth + dx;
+                        newHeight = state.initialElementHeight - dy;
+                        element.style.top = `${parseInt(element.style.top) + dy}px`;
+                        break;
+                    case 'bottom-left':
+                        newWidth = state.initialElementWidth - dx;
+                        newHeight = state.initialElementHeight + dy;
+                        element.style.left = `${parseInt(element.style.left) + dx}px`;
+                        break;
+                    case 'bottom-right':
+                        newWidth = state.initialElementWidth + dx;
+                        newHeight = state.initialElementHeight + dy;
+                        break;
+                }
+                
+                if (newWidth > 10) element.style.width = `${newWidth}px`;
+                if (newHeight > 10) element.style.height = `${newHeight}px`;
+                
+                updatePropertyPanel();
+            }
+            
+            if (state.isRotating && state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const elementRect = element.getBoundingClientRect();
+                const centerX = elementRect.left + elementRect.width / 2;
+                const centerY = elementRect.top + elementRect.height / 2;
+                
+                const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+                const rotation = state.initialRotation + (currentAngle - state.dragStartAngle);
+                
+                element.style.transform = `rotate(${rotation}deg)`;
+                element.dataset.rotation = rotation;
+                
+                document.getElementById('rotation').value = rotation;
+                document.getElementById('rotation-value').textContent = `${Math.round(rotation)}°`;
+            }
+        }
+
+        // Handle canvas mouse up
+        function handleCanvasMouseUp() {
+            if (state.isDragging || state.isResizing || state.isRotating) {
+                saveToHistory();
+            }
+            
+            state.isDragging = false;
+            state.isResizing = false;
+            state.isRotating = false;
+            state.resizeHandle = null;
+        }
+
+        // Handle canvas mouse leave
+        function handleCanvasMouseLeave() {
+            handleCanvasMouseUp();
         }
 
         // Find element at position
@@ -137,13 +574,20 @@
         function selectElement(id) {
             if (state.selectedElement) {
                 const prevElement = document.getElementById(state.selectedElement);
-                if (prevElement) prevElement.classList.remove('selected');
+                if (prevElement) {
+                    prevElement.classList.remove('selected');
+                    const handles = prevElement.querySelectorAll('.resize-handle, .rotate-handle');
+                    handles.forEach(handle => handle.remove());
+                }
             }
             
             state.selectedElement = id;
             const element = document.getElementById(id);
             if (element) {
                 element.classList.add('selected');
+                addResizeHandles(element);
+                showPropertyPanel(element);
+                selectedElementText.textContent = `Selected: ${element.dataset.type || 'element'}`;
             }
         }
 
@@ -153,8 +597,176 @@
                 const element = document.getElementById(state.selectedElement);
                 if (element) {
                     element.classList.remove('selected');
+                    const handles = element.querySelectorAll('.resize-handle, .rotate-handle');
+                    handles.forEach(handle => handle.remove());
                 }
+                
                 state.selectedElement = null;
+                selectedElementText.textContent = 'No element selected';
+                propertyPanel.classList.add('hidden');
+            }
+        }
+
+        // Add resize handles to element
+        function addResizeHandles(element) {
+            const positions = [
+                { handle: 'top-left', left: 0, top: 0 },
+                { handle: 'top-right', left: '100%', top: 0 },
+                { handle: 'bottom-left', left: 0, top: '100%' },
+                { handle: 'bottom-right', left: '100%', top: '100%' }
+            ];
+            
+            positions.forEach(pos => {
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                handle.dataset.handle = pos.handle;
+                handle.style.left = pos.left === '100%' ? `calc(${pos.left} - 6px)` : `${pos.left}px`;
+                handle.style.top = pos.top === '100%' ? `calc(${pos.top} - 6px)` : `${pos.top}px`;
+                handle.style.transform = 'translate(-50%, -50%)';
+                element.appendChild(handle);
+            });
+            
+            const rotateHandle = document.createElement('div');
+            rotateHandle.className = 'rotate-handle';
+            const rotateIcon = document.createElement('i');
+            rotateIcon.className = 'fas fa-sync-alt';
+            rotateHandle.appendChild(rotateIcon);
+            element.appendChild(rotateHandle);
+        }
+
+        // Show property panel
+        function showPropertyPanel(element) {
+            propertyPanel.classList.remove('hidden');
+            
+            document.getElementById('pos-x').value = parseInt(element.style.left);
+            document.getElementById('pos-y').value = parseInt(element.style.top);
+            document.getElementById('width').value = parseInt(element.style.width);
+            document.getElementById('height').value = parseInt(element.style.height);
+            
+            const rotation = parseFloat(element.dataset.rotation || 0);
+            document.getElementById('rotation').value = rotation;
+            document.getElementById('rotation-value').textContent = `${rotation}°`;
+            
+            document.getElementById('text-properties').classList.add('hidden');
+            document.getElementById('shape-properties').classList.add('hidden');
+            
+            const type = element.dataset.type;
+            if (type === 'text') {
+                document.getElementById('text-properties').classList.remove('hidden');
+                document.getElementById('text-content').value = element.textContent;
+                document.getElementById('font-size').value = parseInt(element.style.fontSize);
+                document.getElementById('text-color').value = element.style.color || '#000000';
+            } else if (type === 'shape') {
+                document.getElementById('shape-properties').classList.remove('hidden');
+                document.getElementById('fill-color').value = element.style.backgroundColor || '#3b82f6';
+            }
+        }
+
+        // Update property panel
+        function updatePropertyPanel() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                showPropertyPanel(element);
+            }
+        }
+
+        // Update element position from property panel
+        function updateElementPosition() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const x = parseInt(document.getElementById('pos-x').value);
+                const y = parseInt(document.getElementById('pos-y').value);
+                
+                element.style.left = `${x}px`;
+                element.style.top = `${y}px`;
+                
+                saveToHistory();
+            }
+        }
+
+        // Update element size from property panel
+        function updateElementSize() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const width = parseInt(document.getElementById('width').value);
+                const height = parseInt(document.getElementById('height').value);
+                
+                element.style.width = `${width}px`;
+                element.style.height = `${height}px`;
+                
+                saveToHistory();
+            }
+        }
+
+        // Update element rotation from property panel
+        function updateElementRotation() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                const rotation = document.getElementById('rotation').value;
+                
+                element.style.transform = `rotate(${rotation}deg)`;
+                element.dataset.rotation = rotation;
+                document.getElementById('rotation-value').textContent = `${rotation}°`;
+                
+                saveToHistory();
+            }
+        }
+
+        // Update text content from property panel
+        function updateTextContent() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                if (element.dataset.type === 'text') {
+                    element.textContent = document.getElementById('text-content').value;
+                    saveToHistory();
+                }
+            }
+        }
+
+        // Update text font from property panel
+        function updateTextFont() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                if (element.dataset.type === 'text') {
+                    const fontSize = document.getElementById('font-size').value + 'px';
+                    element.style.fontSize = fontSize;
+                    saveToHistory();
+                }
+            }
+        }
+
+        // Update text color from property panel
+        function updateTextColor() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                if (element.dataset.type === 'text') {
+                    element.style.color = document.getElementById('text-color').value;
+                    saveToHistory();
+                }
+            }
+        }
+
+        // Update shape fill from property panel
+        function updateShapeFill() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                if (element.dataset.type === 'shape') {
+                    element.style.backgroundColor = document.getElementById('fill-color').value;
+                    saveToHistory();
+                }
+            }
+        }
+
+        // Delete selected element
+        function deleteSelectedElement() {
+            if (state.selectedElement) {
+                const element = document.getElementById(state.selectedElement);
+                if (element) {
+                    element.remove();
+                    state.elements = state.elements.filter(el => el.id !== state.selectedElement);
+                    deselectElement();
+                    saveToHistory();
+                }
             }
         }
 
@@ -165,65 +777,481 @@
             
             element.id = id;
             element.className = 'element';
+            element.dataset.type = 'text';
             element.style.position = 'absolute';
             element.style.left = `${x}px`;
             element.style.top = `${y}px`;
             element.style.width = '200px';
-            element.style.padding = '8px';
+            element.style.minHeight = '24px';
+            element.style.padding = '4px';
             element.style.fontFamily = 'Arial';
             element.style.fontSize = '16px';
-            element.style.color = 'black';
-            element.style.backgroundColor = 'white';
-            element.style.border = '1px solid #ccc';
-            element.textContent = 'Double click to edit';
+            element.style.color = '#000000';
+            element.style.backgroundColor = 'transparent';
+            element.style.border = '1px dashed #ccc';
+            element.style.cursor = 'text';
             element.contentEditable = 'true';
+            element.textContent = 'Double click to edit';
             
             canvas.appendChild(element);
             state.elements.push({ id, type: 'text' });
             selectElement(id);
+            element.focus();
+            saveToHistory();
         }
 
-        // Add rectangle
-        function addRectangle(x, y) {
+        // Add shape element
+        function addShape(shape, x = 100, y = 100) {
             const id = `element-${state.nextId++}`;
             const element = document.createElement('div');
             
             element.id = id;
             element.className = 'element';
+            element.dataset.type = 'shape';
+            element.dataset.shape = shape;
             element.style.position = 'absolute';
             element.style.left = `${x}px`;
             element.style.top = `${y}px`;
             element.style.width = '100px';
-            element.style.height = '80px';
+            element.style.height = '100px';
             element.style.backgroundColor = '#3b82f6';
             
+            switch (shape) {
+                case 'circle':
+                    element.style.borderRadius = '50%';
+                    break;
+                case 'triangle':
+                    element.style.width = '0';
+                    element.style.height = '0';
+                    element.style.borderLeft = '50px solid transparent';
+                    element.style.borderRight = '50px solid transparent';
+                    element.style.borderBottom = '100px solid #3b82f6';
+                    element.style.backgroundColor = 'transparent';
+                    break;
+                case 'line':
+                    element.style.width = '150px';
+                    element.style.height = '2px';
+                    element.style.backgroundColor = '#000000';
+                    element.style.border = 'none';
+                    break;
+            }
+            
             canvas.appendChild(element);
-            state.elements.push({ id, type: 'rectangle' });
+            state.elements.push({ id, type: 'shape', shape });
             selectElement(id);
+            saveToHistory();
         }
 
-        // Add circle
-        function addCircle(x, y) {
+        // Handle image upload
+        function handleImageUpload(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (rect.width / 2 - 150) / state.zoom;
+                    const y = (rect.height / 2 - 150) / state.zoom;
+                    
+                    addImageElement(event.target.result, x, y);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            e.target.value = '';
+        }
+
+        // Add image element
+        function addImageElement(src, x, y) {
             const id = `element-${state.nextId++}`;
-            const element = document.createElement('div');
+            const element = document.createElement('img');
             
             element.id = id;
             element.className = 'element';
+            element.dataset.type = 'image';
             element.style.position = 'absolute';
             element.style.left = `${x}px`;
             element.style.top = `${y}px`;
-            element.style.width = '80px';
-            element.style.height = '80px';
-            element.style.borderRadius = '50%';
-            element.style.backgroundColor = '#ef4444';
+            element.style.maxWidth = '300px';
+            element.style.maxHeight = '300px';
+            element.style.objectFit = 'contain';
+            element.src = src;
+            
+            element.onload = function() {
+                element.style.width = `${this.naturalWidth}px`;
+                element.style.height = `${this.naturalHeight}px`;
+                saveToHistory();
+            };
             
             canvas.appendChild(element);
-            state.elements.push({ id, type: 'circle' });
+            state.elements.push({ id, type: 'image', src });
             selectElement(id);
         }
 
-        // Initialize the app
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
+        // Zoom in
+        function zoomIn() {
+            if (state.zoom < 2) {
+                state.zoom += 0.1;
+                applyZoom();
+            }
+        }
+
+        // Zoom out
+        function zoomOut() {
+            if (state.zoom > 0.2) {
+                state.zoom -= 0.1;
+                applyZoom();
+            }
+        }
+
+        // Apply zoom
+        function applyZoom() {
+            state.zoom = Math.round(state.zoom * 10) / 10;
+            canvasContainer.style.transform = `scale(${state.zoom})`;
+            canvasContainer.style.transformOrigin = 'top left';
+            
+            const zoomPercent = Math.round(state.zoom * 100);
+            zoomLevel.textContent = `${zoomPercent}%`;
+            zoomStatus.textContent = `Zoom: ${zoomPercent}%`;
+            
+            saveToHistory();
+        }
+
+        // Toggle grid
+        function toggleGrid() {
+            state.showGrid = !state.showGrid;
+            if (state.showGrid) {
+                canvas.classList.add('canvas-grid');
+                toggleGridBtn.classList.add('text-blue-600');
+            } else {
+                canvas.classList.remove('canvas-grid');
+                toggleGridBtn.classList.remove('text-blue-600');
+            }
+            saveToHistory();
+        }
+
+        // Save to history
+        function saveToHistory() {
+            const snapshot = {
+                elements: JSON.parse(JSON.stringify(state.elements)),
+                zoom: state.zoom,
+                showGrid: state.showGrid
+            };
+            
+            state.history.push(snapshot);
+            state.historyIndex = state.history.length - 1;
+        }
+
+        // Undo
+        function undo() {
+            if (state.historyIndex > 0) {
+                state.historyIndex--;
+                restoreFromHistory();
+            }
+        }
+
+        // Redo
+        function redo() {
+            if (state.historyIndex < state.history.length - 1) {
+                state.historyIndex++;
+                restoreFromHistory();
+            }
+        }
+
+                    // Restore from history
+            function restoreFromHistory() {
+                const historyState = state.history[state.historyIndex];
+                
+                // Clear canvas
+                while (canvas.firstChild) {
+                    canvas.removeChild(canvas.firstChild);
+                }
+                
+                // Restore elements
+                state.elements = [];
+                historyState.elements.forEach(el => {
+                    let element;
+                    
+                    switch (el.type) {
+                        case 'text':
+                            element = addTextElement(0, 0);
+                            break;
+                        case 'shape':
+                            element = addShape(el.shape || 'rectangle', 0, 0);
+                            break;
+                        case 'image':
+                            element = addImageElement(el.src, 0, 0);
+                            break;
+                    }
+                    
+                    if (element) {
+                        const elFromHistory = document.getElementById(el.id);
+                        if (elFromHistory) {
+                            // Restore all properties
+                            elFromHistory.style.left = el.style?.left || '0px';
+                            elFromHistory.style.top = el.style?.top || '0px';
+                            elFromHistory.style.width = el.style?.width || '100px';
+                            elFromHistory.style.height = el.style?.height || '100px';
+                            elFromHistory.style.transform = el.style?.transform || '';
+                            elFromHistory.dataset.rotation = el.dataset?.rotation || '0';
+                            
+                            if (el.type === 'text') {
+                                elFromHistory.textContent = el.textContent || '';
+                                elFromHistory.style.fontSize = el.style?.fontSize || '16px';
+                                elFromHistory.style.color = el.style?.color || '#000000';
+                            } else if (el.type === 'shape') {
+                                elFromHistory.style.backgroundColor = el.style?.backgroundColor || '#3b82f6';
+                                if (el.shape === 'triangle') {
+                                    elFromHistory.style.borderBottom = el.style?.borderBottom || '100px solid #3b82f6';
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Restore zoom and grid
+                state.zoom = historyState.zoom;
+                state.showGrid = historyState.showGrid;
+                applyZoom();
+                
+                if (state.showGrid) {
+                    canvas.classList.add('canvas-grid');
+                    toggleGridBtn.classList.add('text-blue-600');
+                } else {
+                    canvas.classList.remove('canvas-grid');
+                    toggleGridBtn.classList.remove('text-blue-600');
+                }
+                
+                deselectElement();
+                updateUI();
+            }
+
+            // Create new project
+            function createNewProject() {
+                if (confirm('Are you sure you want to create a new project? All unsaved changes will be lost.')) {
+                    // Clear canvas
+                    while (canvas.firstChild) {
+                        canvas.removeChild(canvas.firstChild);
+                    }
+                    
+                    // Reset state
+                    state.elements = [];
+                    state.selectedElement = null;
+                    state.zoom = 1;
+                    state.showGrid = false;
+                    state.nextId = 1;
+                    state.history = [];
+                    state.historyIndex = -1;
+                    
+                    // Update UI
+                    applyZoom();
+                    canvas.classList.remove('canvas-grid');
+                    toggleGridBtn.classList.remove('text-blue-600');
+                    deselectElement();
+                    updateUI();
+                    
+                    // Save initial state
+                    saveToHistory();
+                }
+            }
+
+            // Save project
+            function saveProject() {
+                const projectData = {
+                    elements: state.elements.map(el => {
+                        const element = document.getElementById(el.id);
+                        return {
+                            id: el.id,
+                            type: el.type,
+                            shape: el.shape,
+                            src: el.src,
+                            style: {
+                                left: element?.style.left,
+                                top: element?.style.top,
+                                width: element?.style.width,
+                                height: element?.style.height,
+                                transform: element?.style.transform,
+                                fontSize: element?.style.fontSize,
+                                color: element?.style.color,
+                                backgroundColor: element?.style.backgroundColor,
+                                borderBottom: element?.style.borderBottom
+                            },
+                            textContent: element?.textContent,
+                            dataset: {
+                                rotation: element?.dataset.rotation
+                            }
+                        };
+                    }),
+                    zoom: state.zoom,
+                    showGrid: state.showGrid
+                };
+                
+                const dataStr = JSON.stringify(projectData);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportName = 'canvas-project.json';
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportName);
+                linkElement.click();
+            }
+
+            // Export as image
+            function exportAsImage() {
+                // Create a temporary canvas for rendering
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Set canvas size
+                tempCanvas.width = state.canvasWidth;
+                tempCanvas.height = state.canvasHeight;
+                
+                // Fill with white background
+                tempCtx.fillStyle = 'white';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // Clone all elements to render them
+                const elements = canvas.querySelectorAll('.element');
+                
+                // Create a promise for each element to load
+                const promises = Array.from(elements).map(element => {
+                    return new Promise((resolve) => {
+                        if (element.dataset.type === 'image') {
+                            const img = new Image();
+                            img.onload = function() {
+                                const x = parseInt(element.style.left);
+                                const y = parseInt(element.style.top);
+                                const width = parseInt(element.style.width);
+                                const height = parseInt(element.style.height);
+                                
+                                tempCtx.save();
+                                if (element.dataset.rotation) {
+                                    const rotation = parseFloat(element.dataset.rotation);
+                                    const centerX = x + width / 2;
+                                    const centerY = y + height / 2;
+                                    
+                                    tempCtx.translate(centerX, centerY);
+                                    tempCtx.rotate(rotation * Math.PI / 180);
+                                    tempCtx.translate(-centerX, -centerY);
+                                }
+                                
+                                tempCtx.drawImage(img, x, y, width, height);
+                                tempCtx.restore();
+                                resolve();
+                            };
+                            img.src = element.src;
+                        } else {
+                            const x = parseInt(element.style.left);
+                            const y = parseInt(element.style.top);
+                            const width = parseInt(element.style.width);
+                            const height = parseInt(element.style.height);
+                            
+                            tempCtx.save();
+                            if (element.dataset.rotation) {
+                                const rotation = parseFloat(element.dataset.rotation);
+                                const centerX = x + width / 2;
+                                const centerY = y + height / 2;
+                                
+                                tempCtx.translate(centerX, centerY);
+                                tempCtx.rotate(rotation * Math.PI / 180);
+                                tempCtx.translate(-centerX, -centerY);
+                            }
+                            
+                            if (element.dataset.type === 'text') {
+                                tempCtx.font = `${element.style.fontSize} ${element.style.fontFamily || 'Arial'}`;
+                                tempCtx.fillStyle = element.style.color || '#000000';
+                                tempCtx.fillText(element.textContent, x, y + parseInt(element.style.fontSize));
+                            } else if (element.dataset.type === 'shape') {
+                                tempCtx.fillStyle = element.style.backgroundColor || '#3b82f6';
+                                
+                                switch (element.dataset.shape) {
+                                    case 'rectangle':
+                                        tempCtx.fillRect(x, y, width, height);
+                                        break;
+                                    case 'circle':
+                                        tempCtx.beginPath();
+                                        tempCtx.ellipse(x + width/2, y + height/2, width/2, height/2, 0, 0, Math.PI * 2);
+                                        tempCtx.fill();
+                                        break;
+                                    case 'triangle':
+                                        tempCtx.beginPath();
+                                        tempCtx.moveTo(x + width/2, y);
+                                        tempCtx.lineTo(x, y + height);
+                                        tempCtx.lineTo(x + width, y + height);
+                                        tempCtx.closePath();
+                                        tempCtx.fill();
+                                        break;
+                                    case 'line':
+                                        tempCtx.strokeStyle = element.style.backgroundColor || '#000000';
+                                        tempCtx.lineWidth = height;
+                                        tempCtx.beginPath();
+                                        tempCtx.moveTo(x, y + height/2);
+                                        tempCtx.lineTo(x + width, y + height/2);
+                                        tempCtx.stroke();
+                                        break;
+                                }
+                            }
+                            tempCtx.restore();
+                            resolve();
+                        }
+                    });
+                });
+                
+                // When all elements are rendered, export the image
+                Promise.all(promises).then(() => {
+                    const dataUrl = tempCanvas.toDataURL('image/png');
+                    
+                    const link = document.createElement('a');
+                    link.download = 'canvas-export.png';
+                    link.href = dataUrl;
+                    link.click();
+                });
+            }
+
+            // Update canvas size
+            function updateCanvasSize() {
+                const containerWidth = canvasContainer.parentElement.clientWidth;
+                const containerHeight = canvasContainer.parentElement.clientHeight;
+                
+                // Set canvas container size to fit available space
+                canvasContainer.style.width = `${containerWidth}px`;
+                canvasContainer.style.height = `${containerHeight}px`;
+                
+                // Center the canvas
+                canvas.style.marginLeft = `${(containerWidth - state.canvasWidth) / 2}px`;
+                canvas.style.marginTop = `${(containerHeight - state.canvasHeight) / 2}px`;
+            }
+
+            // Update UI
+            function updateUI() {
+                // Update undo/redo buttons
+                document.getElementById('undo-btn').disabled = state.historyIndex <= 0;
+                document.getElementById('redo-btn').disabled = state.historyIndex >= state.history.length - 1;
+                
+                // Update zoom display
+                const zoomPercent = Math.round(state.zoom * 100);
+                zoomLevel.textContent = `${zoomPercent}%`;
+                zoomStatus.textContent = `Zoom: ${zoomPercent}%`;
+                
+                // Update grid button
+                if (state.showGrid) {
+                    toggleGridBtn.classList.add('text-blue-600');
+                } else {
+                    toggleGridBtn.classList.remove('text-blue-600');
+                }
+            }
+
+            // Initialize the application
+            window.addEventListener('load', () => {
+                initCanvas();
+                saveToHistory(); // Save initial state
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', updateCanvasSize);
+        </script>
+    </body>
 </html>
